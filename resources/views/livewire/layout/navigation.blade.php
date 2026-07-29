@@ -69,6 +69,11 @@ new class extends Component
                             États financiers
                         </x-nav-link>
                     @endcan
+                    @can(Permission::FixedAssetsManage->value)
+                        <x-nav-link :href="route('fixed-assets.index')" :active="request()->routeIs('fixed-assets.*')" wire:navigate>
+                            Immobilisations
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -153,6 +158,11 @@ new class extends Component
             @can(Permission::FinancialStatementsView->value)
                 <x-responsive-nav-link :href="route('financial-statements.income-statement')" :active="request()->routeIs('financial-statements.*')" wire:navigate>
                     États financiers
+                </x-responsive-nav-link>
+            @endcan
+            @can(Permission::FixedAssetsManage->value)
+                <x-responsive-nav-link :href="route('fixed-assets.index')" :active="request()->routeIs('fixed-assets.*')" wire:navigate>
+                    Immobilisations
                 </x-responsive-nav-link>
             @endcan
         </div>

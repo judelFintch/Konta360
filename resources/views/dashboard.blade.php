@@ -84,12 +84,12 @@
                 @endcan
 
                 <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6">
-                    <p class="text-sm font-medium text-gray-500">Pilotage</p>
-                    <h3 class="mt-1 text-lg font-semibold text-gray-900">États financiers</h3>
-                    @can(Permission::FinancialStatementsView->value)
-                        <p class="mt-3 text-sm leading-6 text-gray-600">Consultez le compte de résultat et le bilan depuis la navigation principale.</p>
+                    <p class="text-sm font-medium text-gray-500">Patrimoine</p>
+                    <h3 class="mt-1 text-lg font-semibold text-gray-900">Immobilisations</h3>
+                    @can(Permission::FixedAssetsManage->value)
+                        <p class="mt-3 text-sm leading-6 text-gray-600"><a href="{{ route('fixed-assets.index') }}" class="font-semibold text-indigo-600">Gérer les biens</a> et consulter leurs plans d’amortissement.</p>
                     @else
-                        <p class="mt-3 text-sm leading-6 text-gray-600">Les états financiers sont réservés aux utilisateurs autorisés.</p>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Le registre des immobilisations est réservé aux utilisateurs autorisés.</p>
                     @endcan
                 </div>
             </div>

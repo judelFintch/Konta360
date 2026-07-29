@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountingEntryController;
 use App\Http\Controllers\AccountingPeriodController;
 use App\Http\Controllers\AccountingReportController;
 use App\Http\Controllers\CatalogItemController;
+use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
 use App\Http\Controllers\PaymentController;
@@ -29,6 +30,11 @@ Route::resource('catalog', CatalogItemController::class)
     ->parameters(['catalog' => 'catalog_item'])
     ->only(['index', 'create', 'store', 'edit', 'update'])
     ->middleware(['auth', 'verified', 'permission:'.Permission::CatalogManage->value]);
+
+Route::resource('fixed-assets', FixedAssetController::class)
+    ->parameters(['fixed-assets' => 'fixedAsset'])
+    ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
+    ->middleware(['auth', 'verified', 'permission:'.Permission::FixedAssetsManage->value]);
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('quotes', QuoteController::class)
