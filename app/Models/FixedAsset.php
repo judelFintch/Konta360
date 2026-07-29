@@ -38,6 +38,28 @@ class FixedAsset extends Model
         return round((float) $this->acquisition_cost - (float) $this->residual_value, 2);
     }
 
+    public function usefulLifeInYears(): float
+    {
+        return round($this->useful_life_months / 12, 2);
+    }
+
+    public function usefulLifeLabel(): string
+    {
+        $years = intdiv($this->useful_life_months, 12);
+        $remainingMonths = $this->useful_life_months % 12;
+        $parts = [];
+
+        if ($years > 0) {
+            $parts[] = $years.' '.($years === 1 ? 'an' : 'ans');
+        }
+
+        if ($remainingMonths > 0) {
+            $parts[] = $remainingMonths.' mois';
+        }
+
+        return implode(' et ', $parts);
+    }
+
     public function depreciations(): HasMany
     {
         return $this->hasMany(FixedAssetDepreciation::class);

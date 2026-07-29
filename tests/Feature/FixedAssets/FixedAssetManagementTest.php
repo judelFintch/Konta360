@@ -62,6 +62,18 @@ it('calculates a straight-line schedule with an exact final adjustment', functio
         ->and($schedule->last()['net_book_value'])->toBe(100.0);
 });
 
+it('calculates the useful life in years from months', function () {
+    $asset = new FixedAsset(['useful_life_months' => 18]);
+
+    expect($asset->usefulLifeInYears())->toBe(1.5)
+        ->and($asset->usefulLifeLabel())->toBe('1 an et 6 mois');
+
+    $asset->useful_life_months = 60;
+
+    expect($asset->usefulLifeInYears())->toBe(5.0)
+        ->and($asset->usefulLifeLabel())->toBe('5 ans');
+});
+
 it('rejects a residual value greater than or equal to acquisition cost', function () {
     $this->actingAs($this->user)
         ->post(route('fixed-assets.store'), [

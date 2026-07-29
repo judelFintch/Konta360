@@ -39,9 +39,23 @@
             <select id="currency" name="currency" class="mt-1 block w-full rounded-md border-gray-300"><option value="CDF" @selected(old('currency', $asset?->currency ?? 'CDF') === 'CDF')>CDF</option><option value="USD" @selected(old('currency', $asset?->currency ?? 'CDF') === 'USD')>USD</option></select>
         </div>
     </div>
-    <div>
+    <div
+        x-data="{
+            months: {{ (int) old('useful_life_months', $asset?->useful_life_months ?? 60) }},
+            get years() {
+                const value = Number(this.months);
+                return Number.isFinite(value) && value > 0
+                    ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value / 12)
+                    : '0';
+            }
+        }"
+    >
         <x-input-label for="useful_life_months" value="Durée d’utilisation (mois) *" />
-        <x-text-input id="useful_life_months" name="useful_life_months" type="number" min="1" max="1200" class="mt-1 block w-full" :value="old('useful_life_months', $asset?->useful_life_months ?? 60)" required />
+        <x-text-input id="useful_life_months" name="useful_life_months" type="number" min="1" max="1200" class="mt-1 block w-full" :value="old('useful_life_months', $asset?->useful_life_months ?? 60)" x-model.number="months" required />
+        <p class="mt-2 text-sm text-gray-500">
+            Soit <span class="font-semibold text-indigo-600" x-text="years"></span>
+            <span x-text="Number(months) / 12 === 1 ? 'an' : 'ans'"></span>.
+        </p>
         <x-input-error :messages="$errors->get('useful_life_months')" class="mt-2" />
     </div>
     <div>
