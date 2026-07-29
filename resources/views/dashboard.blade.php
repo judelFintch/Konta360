@@ -43,10 +43,30 @@
                     </a>
                 @endcan
 
+                @can(Permission::QuotesView->value)
+                    <a href="{{ route('quotes.index') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between">
+                            <div><p class="text-sm font-medium text-indigo-600">Ventes</p><h3 class="mt-1 text-lg font-semibold text-gray-900">Devis</h3></div>
+                            <span class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-600 group-hover:bg-indigo-100">→</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Préparer et suivre les propositions commerciales avec calcul automatique.</p>
+                    </a>
+                @endcan
+
+                @can(Permission::InvoicesView->value)
+                    <a href="{{ route('invoices.index') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between">
+                            <div><p class="text-sm font-medium text-indigo-600">Ventes</p><h3 class="mt-1 text-lg font-semibold text-gray-900">Factures</h3></div>
+                            <span class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-600 group-hover:bg-indigo-100">→</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Valider les factures issues des devis et suivre leurs échéances.</p>
+                    </a>
+                @endcan
+
                 <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6">
                     <p class="text-sm font-medium text-gray-500">Prochaine étape</p>
-                    <h3 class="mt-1 text-lg font-semibold text-gray-900">Devis</h3>
-                    <p class="mt-3 text-sm leading-6 text-gray-600">Assembler les tiers et les articles pour produire les premiers documents commerciaux.</p>
+                    <h3 class="mt-1 text-lg font-semibold text-gray-900">Règlements</h3>
+                    <p class="mt-3 text-sm leading-6 text-gray-600">Enregistrer les paiements et suivre les soldes restant dus.</p>
                 </div>
             </div>
         </div>

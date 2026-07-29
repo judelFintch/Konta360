@@ -44,6 +44,16 @@ new class extends Component
                             Catalogue
                         </x-nav-link>
                     @endcan
+                    @can(Permission::QuotesView->value)
+                        <x-nav-link :href="route('quotes.index')" :active="request()->routeIs('quotes.*')" wire:navigate>
+                            Devis
+                        </x-nav-link>
+                    @endcan
+                    @can(Permission::InvoicesView->value)
+                        <x-nav-link :href="route('invoices.index')" :active="request()->routeIs('invoices.*')" wire:navigate>
+                            Factures
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -103,6 +113,16 @@ new class extends Component
             @can(Permission::CatalogManage->value)
                 <x-responsive-nav-link :href="route('catalog.index')" :active="request()->routeIs('catalog.*')" wire:navigate>
                     Catalogue
+                </x-responsive-nav-link>
+            @endcan
+            @can(Permission::QuotesView->value)
+                <x-responsive-nav-link :href="route('quotes.index')" :active="request()->routeIs('quotes.*')" wire:navigate>
+                    Devis
+                </x-responsive-nav-link>
+            @endcan
+            @can(Permission::InvoicesView->value)
+                <x-responsive-nav-link :href="route('invoices.index')" :active="request()->routeIs('invoices.*')" wire:navigate>
+                    Factures
                 </x-responsive-nav-link>
             @endcan
         </div>

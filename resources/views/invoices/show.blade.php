@@ -1,0 +1,53 @@
+@php use App\Modules\Administration\Enums\Permission; use App\Modules\Invoices\Enums\InvoiceStatus; @endphp
+
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p class="text-sm font-medium text-indigo-600">Facture</p><h1 class="text-2xl font-semibold text-gray-900">{{ $invoice->number ?: 'Brouillon #'.$invoice->id }}</h1></div>
+            <div class="flex flex-wrap gap-3">
+                @if ($invoice->status === InvoiceStatus::Draft)
+                    @can(Permission::InvoicesUpdateDraft->value)<a href="{{ route('invoices.edit', $invoice) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Modifier</a>@endcan
+                    @can(Permission::InvoicesValidate->value)
+                        <form method="POST" action="{{ route('invoices.validate', $invoice) }}">@csrf @method('PATCH')<button class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Valider la facture</button></form>
+                    @endcan
+                @endif
+                @if ($invoice->status !== InvoiceStatus::Cancelled)
+                    @can(Permission::InvoicesCancel->value)
+                        <form method="POST" action="{{ route('invoices.cancel', $invoice) }}" onsubmit="return confirm('Confirmer l’annulation de cette facture ?')">@csrf @method('PATCH')<button class="rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50">Annuler</button></form>
+                    @endcan
+                @endif
+            </div>
+        </div>
+    </x-slot>
+
+    <div class="py-10"><div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        @if (session('success'))<div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>@endif
+        <article class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-10">
+            <div class="grid gap-6 border-b border-gray-200 pb-8 sm:grid-cols-2">
+                <div><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Facturé à</p><p class="mt-2 text-lg font-semibold text-gray-900">{{ $invoice->party->name }}</p><p class="mt-1 whitespace-pre-line text-sm text-gray-600">{{ $invoice->party->address }}</p></div>
+                <dl class="grid grid-cols-2 gap-4 text-sm sm:text-right">
+                    <div><dt class="text-gray-500">Statut</dt><dd class="mt-1 font-semibold">{{ $invoice->status->label() }}</dd></div>
+                    <div><dt class="text-gray-500">Devise</dt><dd class="mt-1 font-semibold">{{ $invoice->currency }}</dd></div>
+                    <div><dt class="text-gray-500">Date</dt><dd class="mt-1 font-semibold">{{ $invoice->issue_date->format('d/m/Y') }}</dd></div>
+                    <div><dt class="text-gray-500">Échéance</dt><dd class="mt-1 font-semibold">{{ $invoice->due_date->format('d/m/Y') }}</dd></div>
+                </dl>
+            </div>
+            @if ($invoice->quote)<p class="mt-5 text-sm text-gray-500">Issue du devis <a class="font-semibold text-indigo-600" href="{{ route('quotes.show', $invoice->quote) }}">{{ $invoice->quote->number }}</a></p>@endif
+            <div class="mt-6 overflow-x-auto"><table class="min-w-full">
+                <thead><tr class="border-b text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><th class="py-3">Article</th><th class="py-3 text-right">Qté</th><th class="py-3 text-right">Prix HT</th><th class="py-3 text-right">Remise</th><th class="py-3 text-right">Taxe</th><th class="py-3 text-right">Total TTC</th></tr></thead>
+                <tbody class="divide-y divide-gray-100">@foreach ($invoice->lines as $line)<tr class="text-sm">
+                    <td class="py-4"><p class="font-medium text-gray-900">{{ $line->description }}</p><p class="text-gray-500">{{ $line->sku }} · {{ $line->unit }}</p></td>
+                    <td class="py-4 text-right">{{ number_format((float) $line->quantity, 3, ',', ' ') }}</td><td class="py-4 text-right">{{ number_format((float) $line->unit_price, 2, ',', ' ') }}</td>
+                    <td class="py-4 text-right">{{ number_format((float) $line->discount_rate, 2, ',', ' ') }} %</td><td class="py-4 text-right">{{ number_format((float) $line->tax_amount, 2, ',', ' ') }}</td><td class="py-4 text-right font-semibold">{{ number_format((float) $line->total, 2, ',', ' ') }}</td>
+                </tr>@endforeach</tbody>
+            </table></div>
+            <div class="mt-8 flex justify-end"><dl class="w-full max-w-sm space-y-3 text-sm">
+                <div class="flex justify-between"><dt class="text-gray-500">Sous-total HT</dt><dd>{{ number_format((float) $invoice->subtotal, 2, ',', ' ') }} {{ $invoice->currency }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">Remises</dt><dd>− {{ number_format((float) $invoice->discount_total, 2, ',', ' ') }} {{ $invoice->currency }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">Taxes</dt><dd>{{ number_format((float) $invoice->tax_total, 2, ',', ' ') }} {{ $invoice->currency }}</dd></div>
+                <div class="flex justify-between border-t pt-4 text-lg font-semibold"><dt>Total TTC</dt><dd>{{ number_format((float) $invoice->total, 2, ',', ' ') }} {{ $invoice->currency }}</dd></div>
+            </dl></div>
+            @if ($invoice->notes)<div class="mt-8 rounded-lg bg-gray-50 p-4"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</p><p class="mt-2 whitespace-pre-line text-sm text-gray-700">{{ $invoice->notes }}</p></div>@endif
+        </article>
+    </div></div>
+</x-app-layout>
