@@ -14,7 +14,9 @@
 /.zed
 /auth.json
 /node_modules
-/public/build
+# Compiled frontend assets are intentionally versioned because the production
+# cPanel environment does not provide Node.js/npm. Run `npm run build` locally
+# whenever CSS or JavaScript changes, then commit public/build.
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
