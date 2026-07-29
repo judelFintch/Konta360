@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountingEntryController;
 use App\Http\Controllers\AccountingPeriodController;
 use App\Http\Controllers\AccountingReportController;
+use App\Http\Controllers\BankReconciliationController;
 use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\FixedAssetController;
@@ -75,6 +76,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('treasury/transactions/create', [TreasuryController::class, 'createTransaction'])->name('treasury.transactions.create');
     Route::post('treasury/transactions', [TreasuryController::class, 'storeTransaction'])->name('treasury.transactions.store');
     Route::post('treasury/payments/{payment}/assign', [TreasuryController::class, 'assignPayment'])->name('treasury.payments.assign');
+    Route::get('treasury/reconciliations', [BankReconciliationController::class, 'index'])->name('treasury.reconciliations.index');
+    Route::get('treasury/reconciliations/create', [BankReconciliationController::class, 'create'])->name('treasury.reconciliations.create');
+    Route::post('treasury/reconciliations', [BankReconciliationController::class, 'store'])->name('treasury.reconciliations.store');
+    Route::get('treasury/reconciliations/{reconciliation}', [BankReconciliationController::class, 'show'])->name('treasury.reconciliations.show');
 
     Route::get('accounting/entries', [AccountingEntryController::class, 'index'])->name('accounting.entries.index');
     Route::get('accounting/entries/create', [AccountingEntryController::class, 'create'])->name('accounting.entries.create');

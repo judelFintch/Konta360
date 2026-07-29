@@ -4,7 +4,10 @@
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div><p class="text-sm font-medium text-indigo-600">Finance</p><h1 class="text-2xl font-semibold text-gray-900">Trésorerie</h1></div>
-            @if ($accounts->isNotEmpty())<a href="{{ route('treasury.transactions.create') }}" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">Nouveau mouvement</a>@endif
+            <div class="flex flex-wrap gap-3">
+                <a href="{{ route('treasury.reconciliations.index') }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700">Rapprochements bancaires</a>
+                @if ($accounts->isNotEmpty())<a href="{{ route('treasury.transactions.create') }}" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">Nouveau mouvement</a>@endif
+            </div>
         </div>
     </x-slot>
 

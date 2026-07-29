@@ -1,0 +1,12 @@
+<x-app-layout>
+    <x-slot name="header"><div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-sm font-medium text-indigo-600">Trésorerie</p><h1 class="text-2xl font-semibold text-gray-900">Rapprochements bancaires</h1></div><a href="{{ route('treasury.reconciliations.create') }}" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">Nouveau rapprochement</a></div></x-slot>
+    <div class="py-10"><div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div class="mb-6"><a href="{{ route('treasury.index') }}" class="text-sm font-semibold text-indigo-600">← Retour à la trésorerie</a></div>
+        <div class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200"><div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"><tr><th class="px-5 py-3">Rapprochement</th><th class="px-5 py-3">Compte</th><th class="px-5 py-3">Période</th><th class="px-5 py-3 text-right">Solde relevé</th><th class="px-5 py-3 text-right">Mouvements</th><th class="px-5 py-3">Statut</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">@forelse($reconciliations as $reconciliation)
+                <tr><td class="px-5 py-4"><a href="{{ route('treasury.reconciliations.show', $reconciliation) }}" class="font-semibold text-indigo-600">{{ $reconciliation->number }}</a></td><td class="px-5 py-4">{{ $reconciliation->account->name }}</td><td class="px-5 py-4 text-sm">{{ $reconciliation->starts_on->format('d/m/Y') }} – {{ $reconciliation->ends_on->format('d/m/Y') }}</td><td class="px-5 py-4 text-right font-semibold">{{ number_format((float)$reconciliation->statement_closing_balance,2,',',' ') }} {{ $reconciliation->currency }}</td><td class="px-5 py-4 text-right">{{ $reconciliation->transactions_count }}</td><td class="px-5 py-4"><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">{{ $reconciliation->status->label() }}</span></td></tr>
+            @empty<tr><td colspan="6" class="px-6 py-14 text-center text-gray-500">Aucun rapprochement bancaire.</td></tr>@endforelse</tbody>
+        </table></div>@if($reconciliations->hasPages())<div class="border-t px-6 py-4">{{ $reconciliations->links() }}</div>@endif</div>
+    </div></div>
+</x-app-layout>
