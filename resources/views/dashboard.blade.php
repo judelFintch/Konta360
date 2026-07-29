@@ -1,15 +1,52 @@
+@php use App\Modules\Administration\Enums\Permission; @endphp
+
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Dashboard') }}
-        </h2>
+        <div>
+            <p class="text-sm font-medium text-indigo-600">Konta360</p>
+            <h1 class="text-2xl font-semibold text-gray-900">Tableau de bord</h1>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    {{ __("You're logged in!") }}
+    <div class="py-10">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="rounded-2xl bg-gradient-to-br from-indigo-700 to-indigo-950 p-8 text-white shadow-lg">
+                <p class="text-sm font-medium text-indigo-200">Bienvenue, {{ auth()->user()->name }}</p>
+                <h2 class="mt-2 max-w-2xl text-3xl font-semibold">Pilotez votre activité depuis un espace unique.</h2>
+                <p class="mt-3 max-w-2xl text-indigo-100">Commencez par structurer vos clients et fournisseurs. Ils serviront ensuite aux devis, factures, paiements et écritures.</p>
+            </div>
+
+            <div class="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                @can(Permission::PartiesManage->value)
+                    <a href="{{ route('parties.index') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-indigo-600">Référentiel</p>
+                                <h3 class="mt-1 text-lg font-semibold text-gray-900">Clients et fournisseurs</h3>
+                            </div>
+                            <span class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-600 group-hover:bg-indigo-100">→</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Créer, rechercher et mettre à jour les tiers de l’entreprise.</p>
+                    </a>
+                @endcan
+
+                @can(Permission::CatalogManage->value)
+                    <a href="{{ route('catalog.index') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-indigo-600">Facturation</p>
+                                <h3 class="mt-1 text-lg font-semibold text-gray-900">Produits et services</h3>
+                            </div>
+                            <span class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-600 group-hover:bg-indigo-100">→</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Gérer les références, prix, devises et taux de taxe du catalogue.</p>
+                    </a>
+                @endcan
+
+                <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6">
+                    <p class="text-sm font-medium text-gray-500">Prochaine étape</p>
+                    <h3 class="mt-1 text-lg font-semibold text-gray-900">Devis</h3>
+                    <p class="mt-3 text-sm leading-6 text-gray-600">Assembler les tiers et les articles pour produire les premiers documents commerciaux.</p>
                 </div>
             </div>
         </div>
