@@ -3,6 +3,7 @@
         <div>
             <p class="text-sm font-medium text-indigo-600">Tiers</p>
             <h1 class="text-2xl font-semibold text-gray-900">Nouveau client ou fournisseur</h1>
+            <p class="mt-1 text-sm text-gray-500">Enregistrez ses coordonnées et informations fiscales pour pouvoir lui adresser devis et factures.</p>
         </div>
     </x-slot>
 

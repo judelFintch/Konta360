@@ -6,6 +6,7 @@
             <div>
                 <p class="text-sm font-medium text-indigo-600">Facturation</p>
                 <h1 class="text-2xl font-semibold text-gray-900">Produits et services</h1>
+                <p class="mt-1 text-sm text-gray-500">Le catalogue des articles facturables : prix, devise et taxe par défaut, réutilisés dans devis et factures.</p>
             </div>
             <a href="{{ route('catalog.create') }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
                 Nouvel article

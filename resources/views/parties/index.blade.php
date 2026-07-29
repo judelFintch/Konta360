@@ -6,6 +6,7 @@
             <div>
                 <p class="text-sm font-medium text-indigo-600">Référentiel</p>
                 <h1 class="text-2xl font-semibold text-gray-900">Clients et fournisseurs</h1>
+                <p class="mt-1 text-sm text-gray-500">Le répertoire unique de vos tiers : il alimente automatiquement les devis, factures et règlements.</p>
             </div>
             <a href="{{ route('parties.create') }}" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
                 Nouveau tiers

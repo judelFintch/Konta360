@@ -3,6 +3,7 @@
         <div>
             <p class="text-sm font-medium text-indigo-600">Catalogue</p>
             <h1 class="text-2xl font-semibold text-gray-900">Modifier {{ $catalogItem->name }}</h1>
+            <p class="mt-1 text-sm text-gray-500">Le nouveau prix ou taux de taxe ne s'appliquera qu'aux prochains documents.</p>
         </div>
     </x-slot>
 

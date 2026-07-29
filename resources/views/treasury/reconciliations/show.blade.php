@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">{{ $reconciliation->account->name }}</p><h1 class="text-2xl font-semibold text-gray-900">{{ $reconciliation->number }}</h1></div></x-slot>
+    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">{{ $reconciliation->account->name }}</p><h1 class="text-2xl font-semibold text-gray-900">{{ $reconciliation->number }}</h1><p class="mt-1 text-sm text-gray-500">Détail d'un rapprochement validé et des mouvements qui le composent.</p></div></x-slot>
     <div class="py-10"><div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         @if(session('success'))<div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>@endif
         <article class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">

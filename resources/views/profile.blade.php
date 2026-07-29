@@ -3,6 +3,7 @@
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Profile') }}
         </h2>
+        <p class="mt-1 text-sm text-gray-500">Gérez vos informations personnelles, votre mot de passe et, si besoin, la suppression de votre compte.</p>
     </x-slot>
 
     <div class="py-12">

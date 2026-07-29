@@ -3,7 +3,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p class="text-sm font-medium text-indigo-600">Facture</p><h1 class="text-2xl font-semibold text-gray-900">{{ $invoice->number ?: 'Brouillon #'.$invoice->id }}</h1></div>
+            <div><p class="text-sm font-medium text-indigo-600">Facture</p><h1 class="text-2xl font-semibold text-gray-900">{{ $invoice->number ?: 'Brouillon #'.$invoice->id }}</h1><p class="mt-1 text-sm text-gray-500">Validez la facture, enregistrez les règlements reçus et émettez un avoir en cas de correction.</p></div>
             <div class="flex flex-wrap gap-3">
                 <a href="{{ route('invoices.print', $invoice) }}" target="_blank" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Imprimer</a>
                 <a href="{{ route('invoices.pdf', $invoice) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">PDF</a>

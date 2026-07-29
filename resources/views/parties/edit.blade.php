@@ -3,6 +3,7 @@
         <div>
             <p class="text-sm font-medium text-indigo-600">Tiers</p>
             <h1 class="text-2xl font-semibold text-gray-900">Modifier {{ $party->name }}</h1>
+            <p class="mt-1 text-sm text-gray-500">Mettez à jour ses coordonnées ; les documents déjà émis ne sont pas modifiés rétroactivement.</p>
         </div>
     </x-slot>
 

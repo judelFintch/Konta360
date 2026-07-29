@@ -3,7 +3,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p class="text-sm font-medium text-indigo-600">États comptables</p><h1 class="text-2xl font-semibold text-gray-900">Balance générale</h1></div>
+            <div><p class="text-sm font-medium text-indigo-600">États comptables</p><h1 class="text-2xl font-semibold text-gray-900">Balance générale</h1><p class="mt-1 text-sm text-gray-500">Récapitule les mouvements et soldes de tous les comptes sur une période, pour contrôler l'équilibre général de la comptabilité.</p></div>
             @can(Permission::ReportsExport->value)
                 <a href="{{ route('accounting.trial-balance.pdf', ['date_from' => $dateFrom, 'date_to' => $dateTo, 'currency' => $currency]) }}" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Télécharger PDF</a>
             @endcan

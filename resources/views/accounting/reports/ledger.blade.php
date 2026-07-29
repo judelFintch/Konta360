@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">États comptables</p><h1 class="text-2xl font-semibold text-gray-900">Grand livre</h1></div></x-slot>
+    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">États comptables</p><h1 class="text-2xl font-semibold text-gray-900">Grand livre</h1><p class="mt-1 text-sm text-gray-500">Détail chronologique des mouvements d'un compte comptable et de son solde progressif.</p></div></x-slot>
     <div class="py-10"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         @include('accounting.reports._navigation')
         <form method="GET" class="mb-6 grid gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:grid-cols-[240px_1fr_1fr_140px_auto]">

@@ -6,7 +6,7 @@
 @endphp
 
 <x-app-layout>
-    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Comptabilité générale</p><h1 class="text-2xl font-semibold text-gray-900">Nouvelle écriture manuelle</h1></div></x-slot>
+    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Comptabilité générale</p><h1 class="text-2xl font-semibold text-gray-900">Nouvelle écriture manuelle</h1><p class="mt-1 text-sm text-gray-500">Pour les opérations non couvertes par les ventes ou règlements automatiques ; le total des débits doit égaler le total des crédits.</p></div></x-slot>
     <div class="py-10"><div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <form method="POST" action="{{ route('accounting.entries.store') }}" class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8"
             x-data='{

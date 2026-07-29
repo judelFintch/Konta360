@@ -5,6 +5,7 @@
         <div>
             <p class="text-sm font-medium text-indigo-600">Ventes</p>
             <h1 class="text-2xl font-semibold text-gray-900">Factures</h1>
+            <p class="mt-1 text-sm text-gray-500">Suivez les factures issues des devis, leur échéance de paiement et le solde restant dû.</p>
         </div>
     </x-slot>
 

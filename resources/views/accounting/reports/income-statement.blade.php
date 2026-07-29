@@ -3,7 +3,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p class="text-sm font-medium text-indigo-600">États financiers</p><h1 class="text-2xl font-semibold text-gray-900">Compte de résultat</h1></div>
+            <div><p class="text-sm font-medium text-indigo-600">États financiers</p><h1 class="text-2xl font-semibold text-gray-900">Compte de résultat</h1><p class="mt-1 text-sm text-gray-500">Mesure la performance de l'entreprise sur une période : produits générés moins charges engagées, pour obtenir le résultat net.</p></div>
             @can(Permission::ReportsExport->value)<a href="{{ route('financial-statements.income-statement.pdf', ['date_from' => $dateFrom, 'date_to' => $dateTo, 'currency' => $currency]) }}" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">Télécharger PDF</a>@endcan
         </div>
     </x-slot>

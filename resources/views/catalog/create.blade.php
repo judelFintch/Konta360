@@ -3,6 +3,7 @@
         <div>
             <p class="text-sm font-medium text-indigo-600">Catalogue</p>
             <h1 class="text-2xl font-semibold text-gray-900">Nouveau produit ou service</h1>
+            <p class="mt-1 text-sm text-gray-500">Ajoutez une référence pour la retrouver rapidement lors de la saisie d'un devis ou d'une facture.</p>
         </div>
     </x-slot>
 

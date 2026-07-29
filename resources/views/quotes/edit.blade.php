@@ -3,6 +3,7 @@
         <div>
             <p class="text-sm font-medium text-indigo-600">{{ $quote->number }}</p>
             <h1 class="text-2xl font-semibold text-gray-900">Modifier le devis</h1>
+            <p class="mt-1 text-sm text-gray-500">Un devis reste modifiable tant qu'il est en brouillon, avant d'être envoyé au client.</p>
         </div>
     </x-slot>
 

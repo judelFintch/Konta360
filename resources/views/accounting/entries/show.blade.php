@@ -2,7 +2,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p class="text-sm font-medium text-indigo-600">{{ $entry->journal->code }} — {{ $entry->journal->name }}</p><h1 class="text-2xl font-semibold text-gray-900">{{ $entry->number }}</h1></div>
+            <div><p class="text-sm font-medium text-indigo-600">{{ $entry->journal->code }} — {{ $entry->journal->name }}</p><h1 class="text-2xl font-semibold text-gray-900">{{ $entry->number }}</h1><p class="mt-1 text-sm text-gray-500">Une fois comptabilisée, l'écriture est définitive et impacte les rapports financiers.</p></div>
             @if ($entry->status === EntryStatus::Draft)
                 @can(Permission::AccountingEntriesPost->value)
                     <form method="POST" action="{{ route('accounting.entries.post', $entry) }}" onsubmit="return confirm('Comptabiliser définitivement cette écriture ?')">

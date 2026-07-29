@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Trésorerie</p><h1 class="text-2xl font-semibold text-gray-900">Nouveau rapprochement bancaire</h1></div></x-slot>
+    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Trésorerie</p><h1 class="text-2xl font-semibold text-gray-900">Nouveau rapprochement bancaire</h1><p class="mt-1 text-sm text-gray-500">Cochez les mouvements présents sur le relevé pour vérifier que le solde calculé correspond au solde bancaire réel.</p></div></x-slot>
     <div class="py-10"><div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <form method="GET" class="grid gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200 sm:grid-cols-[1fr_180px_180px_auto]">
             <select name="account_id" class="rounded-md border-gray-300" required><option value="">Compte bancaire</option>@foreach($accounts as $item)<option value="{{ $item->id }}" @selected($account?->id === $item->id)>{{ $item->name }} ({{ $item->currency }})</option>@endforeach</select>

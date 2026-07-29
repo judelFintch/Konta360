@@ -1,7 +1,7 @@
 @php use App\Modules\Treasury\Enums\TreasuryTransactionType; @endphp
 
 <x-app-layout>
-    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Trésorerie</p><h1 class="text-2xl font-semibold text-gray-900">Nouveau mouvement</h1></div></x-slot>
+    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Trésorerie</p><h1 class="text-2xl font-semibold text-gray-900">Nouveau mouvement</h1><p class="mt-1 text-sm text-gray-500">Enregistrez une entrée, une sortie ou un virement interne entre comptes de trésorerie.</p></div></x-slot>
     <div class="py-10"><div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <form method="POST" action="{{ route('treasury.transactions.store') }}" class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8" x-data="{ type: @js(old('type', TreasuryTransactionType::Inflow->value)) }">
             @csrf

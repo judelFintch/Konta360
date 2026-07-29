@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><div class="flex items-center justify-between"><div><p class="text-sm font-medium text-indigo-600">{{ $asset->code }}</p><h1 class="text-2xl font-semibold text-gray-900">{{ $asset->name }}</h1></div><a href="{{ route('fixed-assets.edit', $asset) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700">Modifier</a></div></x-slot>
+    <x-slot name="header"><div class="flex items-center justify-between"><div><p class="text-sm font-medium text-indigo-600">{{ $asset->code }}</p><h1 class="text-2xl font-semibold text-gray-900">{{ $asset->name }}</h1><p class="mt-1 text-sm text-gray-500">Suivez la valeur nette comptable du bien et comptabilisez ses dotations aux amortissements.</p></div><a href="{{ route('fixed-assets.edit', $asset) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700">Modifier</a></div></x-slot>
     <div class="py-10"><div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         @if(session('success'))<div class="mb-6 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>@endif
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

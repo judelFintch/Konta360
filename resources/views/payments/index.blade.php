@@ -2,7 +2,7 @@
 
 <x-app-layout>
     <x-slot name="header">
-        <div><p class="text-sm font-medium text-indigo-600">Trésorerie</p><h1 class="text-2xl font-semibold text-gray-900">Règlements clients</h1></div>
+        <div><p class="text-sm font-medium text-indigo-600">Trésorerie</p><h1 class="text-2xl font-semibold text-gray-900">Règlements clients</h1><p class="mt-1 text-sm text-gray-500">Historique des paiements reçus sur les factures, avec la possibilité d'annuler un règlement erroné.</p></div>
     </x-slot>
 
     <div class="py-10"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
