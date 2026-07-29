@@ -59,6 +59,11 @@ new class extends Component
                             Règlements
                         </x-nav-link>
                     @endcanany
+                    @can(Permission::AccountingView->value)
+                        <x-nav-link :href="route('accounting.entries.index')" :active="request()->routeIs('accounting.*')" wire:navigate>
+                            Comptabilité
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -135,6 +140,11 @@ new class extends Component
                     Règlements
                 </x-responsive-nav-link>
             @endcanany
+            @can(Permission::AccountingView->value)
+                <x-responsive-nav-link :href="route('accounting.entries.index')" :active="request()->routeIs('accounting.*')" wire:navigate>
+                    Comptabilité
+                </x-responsive-nav-link>
+            @endcan
         </div>
 
         <!-- Responsive Settings Options -->

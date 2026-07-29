@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountingEntryController;
 use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
@@ -48,6 +49,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('invoices/{invoice}/payments/create', [PaymentController::class, 'create'])->name('payments.create');
     Route::post('invoices/{invoice}/payments', [PaymentController::class, 'store'])->name('payments.store');
     Route::patch('payments/{payment}/reverse', [PaymentController::class, 'reverse'])->name('payments.reverse');
+
+    Route::get('accounting/entries', [AccountingEntryController::class, 'index'])->name('accounting.entries.index');
+    Route::get('accounting/entries/{entry}', [AccountingEntryController::class, 'show'])->name('accounting.entries.show');
 });
 
 require __DIR__.'/auth.php';

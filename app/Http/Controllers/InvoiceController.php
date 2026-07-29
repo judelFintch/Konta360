@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\InvoiceDraftRequest;
 use App\Models\Invoice;
 use App\Models\Quote;
+use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Quotes\Enums\QuoteStatus;
@@ -134,17 +135,20 @@ class InvoiceController extends Controller
         return to_route('invoices.show', $invoice)->with('success', 'La facture brouillon a été mise à jour.');
     }
 
-    public function validateInvoice(Invoice $invoice): RedirectResponse
+    public function validateInvoice(Invoice $invoice, AccountingService $accounting): RedirectResponse
     {
         $this->requirePermission(Permission::InvoicesValidate);
         $this->ensureDraft($invoice);
 
-        $invoice->update([
-            'number' => sprintf('FAC-%s-%05d', $invoice->issue_date->format('Y'), $invoice->id),
-            'status' => InvoiceStatus::Validated,
-            'validated_at' => now(),
-            'validated_by' => auth()->id(),
-        ]);
+        DB::transaction(function () use ($invoice, $accounting) {
+            $invoice->update([
+                'number' => sprintf('FAC-%s-%05d', $invoice->issue_date->format('Y'), $invoice->id),
+                'status' => InvoiceStatus::Validated,
+                'validated_at' => now(),
+                'validated_by' => auth()->id(),
+            ]);
+            $accounting->postInvoice($invoice, auth()->id());
+        });
 
         return back()->with('success', 'La facture a été validée et numérotée.');
     }

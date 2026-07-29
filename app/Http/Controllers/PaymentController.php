@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\PaymentRequest;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Payments\Enums\PaymentStatus;
@@ -46,12 +47,12 @@ class PaymentController extends Controller
         return view('payments.create', compact('invoice'));
     }
 
-    public function store(PaymentRequest $request, Invoice $invoice): RedirectResponse
+    public function store(PaymentRequest $request, Invoice $invoice, AccountingService $accounting): RedirectResponse
     {
         $this->requirePermission(Permission::PaymentsRecord);
         $data = $request->validated();
 
-        DB::transaction(function () use ($invoice, $data) {
+        DB::transaction(function () use ($invoice, $data, $accounting) {
             $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
             $this->ensurePayable($invoice);
             $balance = $invoice->balanceDue();
@@ -74,27 +75,30 @@ class PaymentController extends Controller
             $payment->update([
                 'number' => sprintf('REG-%s-%05d', $payment->payment_date->format('Y'), $payment->id),
             ]);
+            $accounting->postPayment($payment, auth()->id());
         });
 
         return to_route('invoices.show', $invoice)->with('success', 'Le règlement a été enregistré.');
     }
 
-    public function reverse(Request $request, Payment $payment): RedirectResponse
+    public function reverse(Request $request, Payment $payment, AccountingService $accounting): RedirectResponse
     {
         $this->requirePermission(Permission::PaymentsReverse);
         $data = $request->validate([
             'reversal_reason' => ['required', 'string', 'min:3', 'max:1000'],
         ]);
 
-        DB::transaction(function () use ($payment, $data) {
+        DB::transaction(function () use ($payment, $data, $accounting) {
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             abort_unless($payment->status === PaymentStatus::Recorded, 409, 'Ce règlement est déjà annulé.');
+            $accounting->postPayment($payment, auth()->id());
             $payment->update([
                 'status' => PaymentStatus::Reversed,
                 'reversed_at' => now(),
                 'reversed_by' => auth()->id(),
                 'reversal_reason' => trim($data['reversal_reason']),
             ]);
+            $accounting->reversePayment($payment, auth()->id());
         });
 
         return back()->with('success', 'Le règlement a été annulé et reste visible dans l’historique.');
