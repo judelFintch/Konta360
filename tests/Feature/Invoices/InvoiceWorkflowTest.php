@@ -57,6 +57,17 @@ it('converts a sent quote into one draft invoice with exact snapshots', function
         ->and($this->quote->refresh()->status)->toBe(QuoteStatus::Accepted);
 });
 
+it('converts a draft quote directly and marks it as accepted', function () {
+    $this->quote->update(['status' => QuoteStatus::Draft]);
+
+    $this->actingAs($this->user)
+        ->post(route('quotes.invoice', $this->quote))
+        ->assertRedirect();
+
+    expect(Invoice::firstOrFail()->status)->toBe(InvoiceStatus::Draft)
+        ->and($this->quote->refresh()->status)->toBe(QuoteStatus::Accepted);
+});
+
 it('prevents converting the same quote twice', function () {
     $this->actingAs($this->user)->post(route('quotes.invoice', $this->quote))->assertRedirect();
 

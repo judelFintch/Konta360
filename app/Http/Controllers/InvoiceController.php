@@ -8,10 +8,12 @@ use App\Models\Quote;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Quotes\Enums\QuoteStatus;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class InvoiceController extends Controller
 {
@@ -47,6 +49,23 @@ class InvoiceController extends Controller
         return view('invoices.show', compact('invoice'));
     }
 
+    public function print(Invoice $invoice): View
+    {
+        $this->requirePermission(Permission::InvoicesView);
+
+        return view('documents.commercial', $this->documentData($invoice, false));
+    }
+
+    public function pdf(Invoice $invoice): Response
+    {
+        $this->requirePermission(Permission::InvoicesView);
+        $filename = ($invoice->number ?: 'facture-brouillon-'.$invoice->id).'.pdf';
+
+        return Pdf::loadView('documents.commercial', $this->documentData($invoice, true))
+            ->setPaper('a4')
+            ->download($filename);
+    }
+
     public function convert(Quote $quote): RedirectResponse
     {
         $this->requirePermission(Permission::QuotesConvert);
@@ -55,9 +74,9 @@ class InvoiceController extends Controller
         $invoice = DB::transaction(function () use ($quote) {
             $quote = Quote::query()->with('lines')->lockForUpdate()->findOrFail($quote->id);
             abort_unless(
-                in_array($quote->status, [QuoteStatus::Sent, QuoteStatus::Accepted], true),
+                in_array($quote->status, [QuoteStatus::Draft, QuoteStatus::Sent, QuoteStatus::Accepted], true),
                 409,
-                'Seul un devis envoyé ou accepté peut être converti.'
+                'Ce devis ne peut pas être converti.'
             );
             abort_if(Invoice::where('quote_id', $quote->id)->exists(), 409, 'Ce devis a déjà été facturé.');
 
@@ -146,6 +165,22 @@ class InvoiceController extends Controller
     private function ensureDraft(Invoice $invoice): void
     {
         abort_unless($invoice->status === InvoiceStatus::Draft, 409, 'Seule une facture brouillon peut être modifiée.');
+    }
+
+    private function documentData(Invoice $invoice, bool $forPdf): array
+    {
+        $invoice->load(['party', 'lines']);
+
+        return [
+            'document' => $invoice,
+            'documentType' => 'Facture',
+            'documentNumber' => $invoice->number ?: 'Brouillon #'.$invoice->id,
+            'secondaryDateLabel' => 'Échéance',
+            'secondaryDate' => $invoice->due_date,
+            'backUrl' => route('invoices.show', $invoice),
+            'pdfUrl' => route('invoices.pdf', $invoice),
+            'forPdf' => $forPdf,
+        ];
     }
 
     private function requirePermission(Permission $permission): void

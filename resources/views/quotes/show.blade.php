@@ -8,6 +8,8 @@
                 <h1 class="text-2xl font-semibold text-gray-900">{{ $quote->number }}</h1>
             </div>
             <div class="flex gap-3">
+                <a href="{{ route('quotes.print', $quote) }}" target="_blank" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Imprimer</a>
+                <a href="{{ route('quotes.pdf', $quote) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">PDF</a>
                 @if ($quote->status === QuoteStatus::Draft)
                     @can(Permission::QuotesCreate->value)
                         <a href="{{ route('quotes.edit', $quote) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Modifier</a>
@@ -17,7 +19,7 @@
                         </form>
                     @endcan
                 @endif
-                @if (in_array($quote->status, [QuoteStatus::Sent, QuoteStatus::Accepted], true))
+                @if (in_array($quote->status, [QuoteStatus::Draft, QuoteStatus::Sent, QuoteStatus::Accepted], true))
                     @if ($quote->invoice)
                         @can(Permission::InvoicesView->value)
                             <a href="{{ route('invoices.show', $quote->invoice) }}" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Voir la facture</a>
@@ -27,7 +29,10 @@
                             @can(Permission::InvoicesCreate->value)
                                 <form method="POST" action="{{ route('quotes.invoice', $quote) }}">
                                     @csrf
-                                    <button class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Convertir en facture</button>
+                                    <button class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                                            onclick="return confirm('Créer une facture brouillon à partir de ce devis ?')">
+                                        Convertir en facture
+                                    </button>
                                 </form>
                             @endcan
                         @endcan

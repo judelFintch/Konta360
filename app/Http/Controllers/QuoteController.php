@@ -10,10 +10,12 @@ use App\Modules\Administration\Enums\Permission;
 use App\Modules\Parties\Enums\PartyType;
 use App\Modules\Quotes\Enums\QuoteStatus;
 use App\Modules\Quotes\Services\QuoteCalculator;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class QuoteController extends Controller
 {
@@ -78,6 +80,22 @@ class QuoteController extends Controller
         return view('quotes.show', compact('quote'));
     }
 
+    public function print(Quote $quote): View
+    {
+        $this->requirePermission(Permission::QuotesView);
+
+        return view('documents.commercial', $this->documentData($quote, false));
+    }
+
+    public function pdf(Quote $quote): Response
+    {
+        $this->requirePermission(Permission::QuotesView);
+
+        return Pdf::loadView('documents.commercial', $this->documentData($quote, true))
+            ->setPaper('a4')
+            ->download($quote->number.'.pdf');
+    }
+
     public function edit(Quote $quote): View
     {
         $this->requirePermission(Permission::QuotesCreate);
@@ -124,6 +142,22 @@ class QuoteController extends Controller
                 ->orderBy('name')
                 ->get(),
             'catalogItems' => CatalogItem::query()->where('is_active', true)->orderBy('name')->get(),
+        ];
+    }
+
+    private function documentData(Quote $quote, bool $forPdf): array
+    {
+        $quote->load(['party', 'lines']);
+
+        return [
+            'document' => $quote,
+            'documentType' => 'Devis',
+            'documentNumber' => $quote->number,
+            'secondaryDateLabel' => 'Valable jusqu’au',
+            'secondaryDate' => $quote->valid_until,
+            'backUrl' => route('quotes.show', $quote),
+            'pdfUrl' => route('quotes.pdf', $quote),
+            'forPdf' => $forPdf,
         ];
     }
 

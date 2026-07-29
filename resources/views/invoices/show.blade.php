@@ -5,6 +5,8 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div><p class="text-sm font-medium text-indigo-600">Facture</p><h1 class="text-2xl font-semibold text-gray-900">{{ $invoice->number ?: 'Brouillon #'.$invoice->id }}</h1></div>
             <div class="flex flex-wrap gap-3">
+                <a href="{{ route('invoices.print', $invoice) }}" target="_blank" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Imprimer</a>
+                <a href="{{ route('invoices.pdf', $invoice) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">PDF</a>
                 @if ($invoice->status === InvoiceStatus::Draft)
                     @can(Permission::InvoicesUpdateDraft->value)<a href="{{ route('invoices.edit', $invoice) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Modifier</a>@endcan
                     @can(Permission::InvoicesValidate->value)
