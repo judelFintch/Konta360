@@ -38,7 +38,7 @@ new class extends Component
                     @canany([Permission::QuotesView->value, Permission::InvoicesView->value, Permission::PaymentsRecord->value])
                         <x-dropdown align="left" width="48">
                             <x-slot name="trigger">
-                                <button class="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('quotes.*', 'invoices.*', 'payments.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                                <button class="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('quotes.*', 'invoices.*', 'credit-notes.*', 'payments.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                                     Ventes
                                     <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                                 </button>
@@ -46,6 +46,7 @@ new class extends Component
                             <x-slot name="content">
                                 @can(Permission::QuotesView->value)<x-dropdown-link :href="route('quotes.index')" wire:navigate>Devis</x-dropdown-link>@endcan
                                 @can(Permission::InvoicesView->value)<x-dropdown-link :href="route('invoices.index')" wire:navigate>Factures</x-dropdown-link>@endcan
+                                @can(Permission::InvoicesView->value)<x-dropdown-link :href="route('credit-notes.index')" wire:navigate>Avoirs</x-dropdown-link>@endcan
                                 @canany([Permission::PaymentsRecord->value, Permission::PaymentsReverse->value])<x-dropdown-link :href="route('payments.index')" wire:navigate>Règlements</x-dropdown-link>@endcanany
                             </x-slot>
                         </x-dropdown>
@@ -151,6 +152,9 @@ new class extends Component
             @can(Permission::InvoicesView->value)
                 <x-responsive-nav-link :href="route('invoices.index')" :active="request()->routeIs('invoices.*')" wire:navigate>
                     Factures
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('credit-notes.index')" :active="request()->routeIs('credit-notes.*')" wire:navigate>
+                    Avoirs
                 </x-responsive-nav-link>
             @endcan
             @canany([Permission::PaymentsRecord->value, Permission::PaymentsReverse->value])

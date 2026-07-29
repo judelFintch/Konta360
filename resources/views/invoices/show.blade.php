@@ -23,6 +23,11 @@
                         <a href="{{ route('payments.create', $invoice) }}" class="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">Enregistrer un règlement</a>
                     @endcan
                 @endif
+                @if ($invoice->status === InvoiceStatus::Validated && $invoice->creditedAmount() < (float) $invoice->total)
+                    @can(Permission::CreditNotesCreate->value)
+                        <a href="{{ route('credit-notes.create', $invoice) }}" class="rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-400">Créer un avoir</a>
+                    @endcan
+                @endif
             </div>
         </div>
     </x-slot>
@@ -54,6 +59,7 @@
                 <div class="flex justify-between"><dt class="text-gray-500">Taxes</dt><dd>{{ number_format((float) $invoice->tax_total, 2, ',', ' ') }} {{ $invoice->currency }}</dd></div>
                 <div class="flex justify-between border-t pt-4 text-lg font-semibold"><dt>Total TTC</dt><dd>{{ number_format((float) $invoice->total, 2, ',', ' ') }} {{ $invoice->currency }}</dd></div>
                 <div class="flex justify-between text-emerald-700"><dt>Montant payé</dt><dd>− {{ number_format($invoice->paidAmount(), 2, ',', ' ') }} {{ $invoice->currency }}</dd></div>
+                <div class="flex justify-between text-amber-700"><dt>Avoirs émis</dt><dd>− {{ number_format($invoice->creditedAmount(), 2, ',', ' ') }} {{ $invoice->currency }}</dd></div>
                 <div class="flex justify-between rounded-lg bg-indigo-50 px-3 py-2 text-base font-semibold text-indigo-900"><dt>Solde restant</dt><dd>{{ number_format($invoice->balanceDue(), 2, ',', ' ') }} {{ $invoice->currency }}</dd></div>
             </dl></div>
             <section class="mt-10 border-t border-gray-200 pt-8">
@@ -69,6 +75,24 @@
                                 <tr><td class="px-4 py-3 font-medium">{{ $payment->number }}</td><td class="px-4 py-3">{{ $payment->payment_date->format('d/m/Y') }}</td><td class="px-4 py-3">{{ $payment->method->label() }}</td><td class="px-4 py-3">{{ $payment->status->label() }}</td><td class="px-4 py-3 text-right font-semibold">{{ number_format((float) $payment->amount, 2, ',', ' ') }} {{ $payment->currency }}</td></tr>
                             @empty
                                 <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Aucun règlement enregistré.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <section class="mt-10 border-t border-gray-200 pt-8">
+                <div class="flex items-center justify-between">
+                    <div><h2 class="font-semibold text-gray-900">Avoirs liés</h2><p class="mt-1 text-sm text-gray-500">Les montants crédités réduisent le solde de la facture.</p></div>
+                    <a href="{{ route('credit-notes.index') }}" class="text-sm font-semibold text-indigo-600">Voir tous les avoirs</a>
+                </div>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500"><tr><th class="px-4 py-3">Numéro</th><th class="px-4 py-3">Date</th><th class="px-4 py-3">Motif</th><th class="px-4 py-3 text-right">Montant</th></tr></thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse ($invoice->creditNotes as $creditNote)
+                                <tr><td class="px-4 py-3"><a href="{{ route('credit-notes.show', $creditNote) }}" class="font-semibold text-indigo-600">{{ $creditNote->number }}</a></td><td class="px-4 py-3">{{ $creditNote->issue_date->format('d/m/Y') }}</td><td class="px-4 py-3">{{ $creditNote->reason }}</td><td class="px-4 py-3 text-right font-semibold">{{ number_format((float) $creditNote->total, 2, ',', ' ') }} {{ $creditNote->currency }}</td></tr>
+                            @empty
+                                <tr><td colspan="4" class="px-4 py-8 text-center text-gray-500">Aucun avoir émis.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

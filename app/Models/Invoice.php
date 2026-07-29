@@ -70,6 +70,16 @@ class Invoice extends Model
         return $this->payments()->where('status', PaymentStatus::Recorded);
     }
 
+    public function creditNotes(): HasMany
+    {
+        return $this->hasMany(CreditNote::class)->latest('issue_date')->latest('id');
+    }
+
+    public function creditedAmount(): float
+    {
+        return round((float) $this->creditNotes()->sum('total'), 2);
+    }
+
     public function paidAmount(): float
     {
         return round((float) $this->recordedPayments()->sum('amount'), 2);
@@ -77,7 +87,7 @@ class Invoice extends Model
 
     public function balanceDue(): float
     {
-        return max(0, round((float) $this->total - $this->paidAmount(), 2));
+        return max(0, round((float) $this->total - $this->creditedAmount() - $this->paidAmount(), 2));
     }
 
     public function paymentLabel(): string

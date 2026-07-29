@@ -1,4 +1,4 @@
-@php use App\Modules\Invoices\Enums\InvoiceStatus; @endphp
+@php use App\Modules\Administration\Enums\Permission; use App\Modules\Invoices\Enums\InvoiceStatus; @endphp
 
 <x-app-layout>
     <x-slot name="header">
@@ -27,7 +27,7 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50"><tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                             <th class="px-6 py-3">Numéro</th><th class="px-6 py-3">Client</th><th class="px-6 py-3">Échéance</th>
-                            <th class="px-6 py-3">Statut</th><th class="px-6 py-3 text-right">Total TTC</th>
+                            <th class="px-6 py-3">Statut</th><th class="px-6 py-3 text-right">Total TTC</th><th class="px-6 py-3 text-right">Actions</th>
                         </tr></thead>
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($invoices as $invoice)
@@ -37,9 +37,19 @@
                                     <td class="px-6 py-4 text-sm text-gray-600">{{ $invoice->due_date->format('d/m/Y') }}</td>
                                     <td class="px-6 py-4"><span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">{{ $invoice->status->label() }}</span></td>
                                     <td class="px-6 py-4 text-right text-sm font-semibold text-gray-900">{{ number_format((float) $invoice->total, 2, ',', ' ') }} {{ $invoice->currency }}</td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="flex justify-end gap-3">
+                                            <a href="{{ route('invoices.show', $invoice) }}" class="text-sm font-semibold text-indigo-600">Voir</a>
+                                            @if ($invoice->status === InvoiceStatus::Validated && $invoice->creditedAmount() < (float) $invoice->total)
+                                                @can(Permission::CreditNotesCreate->value)
+                                                    <a href="{{ route('credit-notes.create', $invoice) }}" class="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-400">Créer un avoir</a>
+                                                @endcan
+                                            @endif
+                                        </div>
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="px-6 py-14 text-center"><p class="font-medium text-gray-900">Aucune facture</p><p class="mt-1 text-sm text-gray-500">Convertissez un devis envoyé pour créer une facture.</p></td></tr>
+                                <tr><td colspan="6" class="px-6 py-14 text-center"><p class="font-medium text-gray-900">Aucune facture</p><p class="mt-1 text-sm text-gray-500">Convertissez un devis envoyé pour créer une facture.</p></td></tr>
                             @endforelse
                         </tbody>
                     </table>

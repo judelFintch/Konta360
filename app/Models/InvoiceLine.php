@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'catalog_item_id',
@@ -42,5 +43,20 @@ class InvoiceLine extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function creditNoteLines(): HasMany
+    {
+        return $this->hasMany(CreditNoteLine::class);
+    }
+
+    public function creditedQuantity(): float
+    {
+        return round((float) $this->creditNoteLines()->sum('quantity'), 3);
+    }
+
+    public function creditableQuantity(): float
+    {
+        return max(0, round((float) $this->quantity - $this->creditedQuantity(), 3));
     }
 }

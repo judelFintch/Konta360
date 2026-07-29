@@ -88,7 +88,7 @@
         <table style="width: 100%; margin-bottom: 20px;">
             <tr>
                 <td><span class="muted">Date d’émission :</span> <strong>{{ $document->issue_date->format('d/m/Y') }}</strong></td>
-                <td class="right"><span class="muted">{{ $secondaryDateLabel }} :</span> <strong>{{ $secondaryDate->format('d/m/Y') }}</strong></td>
+                <td class="right"><span class="muted">{{ $secondaryDateLabel }} :</span> <strong>{{ $secondaryDateValue ?? $secondaryDate->format('d/m/Y') }}</strong></td>
             </tr>
         </table>
 
@@ -126,8 +126,8 @@
             </table>
         </div>
 
-        @if ($document->notes)
-            <div class="notes"><div class="label">Notes et conditions</div>{{ $document->notes }}</div>
+        @if ($notesText ?? $document->notes)
+            <div class="notes"><div class="label">{{ $notesLabel ?? 'Notes et conditions' }}</div>{{ $notesText ?? $document->notes }}</div>
         @endif
 
         <div class="footer">Document généré par {{ config('app.name', 'Konta360') }} le {{ now()->format('d/m/Y à H:i') }}</div>

@@ -5,6 +5,7 @@ namespace App\Modules\Accounting\Services;
 use App\Models\Account;
 use App\Models\AccountingEntry;
 use App\Models\AccountingPeriod;
+use App\Models\CreditNote;
 use App\Models\FixedAssetDepreciation;
 use App\Models\Invoice;
 use App\Models\Journal;
@@ -58,6 +59,31 @@ class AccountingService
                 $this->line($cashAccount, "Encaissement {$payment->number}", (float) $payment->amount, 0),
                 $this->line('411', "Règlement client {$payment->number}", 0, (float) $payment->amount),
             ],
+            $userId
+        );
+    }
+
+    public function postCreditNote(CreditNote $creditNote, int $userId): AccountingEntry
+    {
+        $netSales = round((float) $creditNote->subtotal - (float) $creditNote->discount_total, 2);
+        $lines = [
+            $this->line('70', "Retour sur vente {$creditNote->number}", $netSales, 0),
+        ];
+
+        if ((float) $creditNote->tax_total > 0) {
+            $lines[] = $this->line('4431', "Taxes annulées {$creditNote->number}", (float) $creditNote->tax_total, 0);
+        }
+
+        $lines[] = $this->line('411', "Avoir client {$creditNote->number}", 0, (float) $creditNote->total);
+
+        return $this->post(
+            'credit_note',
+            $creditNote->id,
+            'VE',
+            $creditNote->issue_date->format('Y-m-d'),
+            "Avoir {$creditNote->number} — {$creditNote->party()->value('name')}",
+            $creditNote->currency,
+            $lines,
             $userId
         );
     }

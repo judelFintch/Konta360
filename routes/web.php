@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountingEntryController;
 use App\Http\Controllers\AccountingPeriodController;
 use App\Http\Controllers\AccountingReportController;
 use App\Http\Controllers\CatalogItemController;
+use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
@@ -55,6 +56,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('quotes/{quote}/invoice', [InvoiceController::class, 'convert'])->name('quotes.invoice');
     Route::patch('invoices/{invoice}/validate', [InvoiceController::class, 'validateInvoice'])->name('invoices.validate');
     Route::patch('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
+
+    Route::get('credit-notes', [CreditNoteController::class, 'index'])->name('credit-notes.index');
+    Route::get('invoices/{invoice}/credit-notes/create', [CreditNoteController::class, 'create'])->name('credit-notes.create');
+    Route::post('invoices/{invoice}/credit-notes', [CreditNoteController::class, 'store'])->name('credit-notes.store');
+    Route::get('credit-notes/{creditNote}', [CreditNoteController::class, 'show'])->name('credit-notes.show');
+    Route::get('credit-notes/{creditNote}/print', [CreditNoteController::class, 'print'])->name('credit-notes.print');
+    Route::get('credit-notes/{creditNote}/pdf', [CreditNoteController::class, 'pdf'])->name('credit-notes.pdf');
 
     Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('invoices/{invoice}/payments/create', [PaymentController::class, 'create'])->name('payments.create');
