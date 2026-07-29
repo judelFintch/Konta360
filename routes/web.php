@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountingEntryController;
+use App\Http\Controllers\AccountingPeriodController;
 use App\Http\Controllers\AccountingReportController;
 use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\InvoiceController;
@@ -56,6 +57,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('accounting/trial-balance', [AccountingReportController::class, 'trialBalance'])->name('accounting.trial-balance');
     Route::get('accounting/trial-balance/pdf', [AccountingReportController::class, 'trialBalancePdf'])->name('accounting.trial-balance.pdf');
     Route::get('accounting/ledger', [AccountingReportController::class, 'ledger'])->name('accounting.ledger');
+    Route::get('accounting/periods', [AccountingPeriodController::class, 'index'])->name('accounting.periods.index');
+    Route::post('accounting/periods', [AccountingPeriodController::class, 'store'])->name('accounting.periods.store');
+    Route::patch('accounting/periods/{period}/close', [AccountingPeriodController::class, 'close'])->name('accounting.periods.close');
 });
 
 require __DIR__.'/auth.php';

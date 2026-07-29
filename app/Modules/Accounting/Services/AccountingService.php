@@ -4,12 +4,15 @@ namespace App\Modules\Accounting\Services;
 
 use App\Models\Account;
 use App\Models\AccountingEntry;
+use App\Models\AccountingPeriod;
 use App\Models\Invoice;
 use App\Models\Journal;
 use App\Models\Payment;
 use App\Modules\Accounting\Enums\EntryStatus;
+use App\Modules\Accounting\Enums\PeriodStatus;
 use App\Modules\Payments\Enums\PaymentMethod;
 use LogicException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class AccountingService
 {
@@ -107,6 +110,8 @@ class AccountingService
             return $existing;
         }
 
+        $this->ensurePeriodIsOpen($date);
+
         $debit = round((float) collect($lines)->sum('debit'), 2);
         $credit = round((float) collect($lines)->sum('credit'), 2);
 
@@ -150,5 +155,18 @@ class AccountingService
             'debit' => $debit,
             'credit' => $credit,
         ];
+    }
+
+    private function ensurePeriodIsOpen(string $date): void
+    {
+        $closedPeriod = AccountingPeriod::query()
+            ->where('status', PeriodStatus::Closed)
+            ->whereDate('starts_on', '<=', $date)
+            ->whereDate('ends_on', '>=', $date)
+            ->first();
+
+        if ($closedPeriod) {
+            throw new ConflictHttpException("La période {$closedPeriod->name} est clôturée : aucune nouvelle écriture n’est autorisée.");
+        }
     }
 }
