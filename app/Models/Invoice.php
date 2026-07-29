@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Modules\Invoices\Enums\InvoiceStatus;
+use App\Modules\Payments\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -57,6 +58,37 @@ class Invoice extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(InvoiceLine::class)->orderBy('position');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->latest('payment_date')->latest('id');
+    }
+
+    public function recordedPayments(): HasMany
+    {
+        return $this->payments()->where('status', PaymentStatus::Recorded);
+    }
+
+    public function paidAmount(): float
+    {
+        return round((float) $this->recordedPayments()->sum('amount'), 2);
+    }
+
+    public function balanceDue(): float
+    {
+        return max(0, round((float) $this->total - $this->paidAmount(), 2));
+    }
+
+    public function paymentLabel(): string
+    {
+        $paid = $this->paidAmount();
+
+        return match (true) {
+            $paid <= 0 => 'Non payée',
+            $this->balanceDue() <= 0 => 'Payée',
+            default => 'Partiellement payée',
+        };
     }
 
     public function creator(): BelongsTo

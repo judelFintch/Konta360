@@ -54,6 +54,11 @@ new class extends Component
                             Factures
                         </x-nav-link>
                     @endcan
+                    @canany([Permission::PaymentsRecord->value, Permission::PaymentsReverse->value])
+                        <x-nav-link :href="route('payments.index')" :active="request()->routeIs('payments.*')" wire:navigate>
+                            Règlements
+                        </x-nav-link>
+                    @endcanany
                 </div>
             </div>
 
@@ -125,6 +130,11 @@ new class extends Component
                     Factures
                 </x-responsive-nav-link>
             @endcan
+            @canany([Permission::PaymentsRecord->value, Permission::PaymentsReverse->value])
+                <x-responsive-nav-link :href="route('payments.index')" :active="request()->routeIs('payments.*')" wire:navigate>
+                    Règlements
+                </x-responsive-nav-link>
+            @endcanany
         </div>
 
         <!-- Responsive Settings Options -->

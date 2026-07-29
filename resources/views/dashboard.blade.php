@@ -63,10 +63,20 @@
                     </a>
                 @endcan
 
+                @canany([Permission::PaymentsRecord->value, Permission::PaymentsReverse->value])
+                    <a href="{{ route('payments.index') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between">
+                            <div><p class="text-sm font-medium text-indigo-600">Trésorerie</p><h3 class="mt-1 text-lg font-semibold text-gray-900">Règlements</h3></div>
+                            <span class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-600 group-hover:bg-indigo-100">→</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Enregistrer les paiements et suivre les soldes restant dus.</p>
+                    </a>
+                @endcanany
+
                 <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6">
                     <p class="text-sm font-medium text-gray-500">Prochaine étape</p>
-                    <h3 class="mt-1 text-lg font-semibold text-gray-900">Règlements</h3>
-                    <p class="mt-3 text-sm leading-6 text-gray-600">Enregistrer les paiements et suivre les soldes restant dus.</p>
+                    <h3 class="mt-1 text-lg font-semibold text-gray-900">Comptabilité</h3>
+                    <p class="mt-3 text-sm leading-6 text-gray-600">Générer les écritures issues des factures et règlements.</p>
                 </div>
             </div>
         </div>

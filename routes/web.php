@@ -3,6 +3,7 @@
 use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\QuoteController;
 use App\Modules\Administration\Enums\Permission;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('quotes/{quote}/invoice', [InvoiceController::class, 'convert'])->name('quotes.invoice');
     Route::patch('invoices/{invoice}/validate', [InvoiceController::class, 'validateInvoice'])->name('invoices.validate');
     Route::patch('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
+
+    Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::get('invoices/{invoice}/payments/create', [PaymentController::class, 'create'])->name('payments.create');
+    Route::post('invoices/{invoice}/payments', [PaymentController::class, 'store'])->name('payments.store');
+    Route::patch('payments/{payment}/reverse', [PaymentController::class, 'reverse'])->name('payments.reverse');
 });
 
 require __DIR__.'/auth.php';

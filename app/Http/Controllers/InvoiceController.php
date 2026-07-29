@@ -44,7 +44,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): View
     {
         $this->requirePermission(Permission::InvoicesView);
-        $invoice->load(['party', 'quote', 'lines', 'creator']);
+        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder']);
 
         return view('invoices.show', compact('invoice'));
     }
