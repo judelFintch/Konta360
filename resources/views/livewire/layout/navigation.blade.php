@@ -64,6 +64,11 @@ new class extends Component
                             Comptabilité
                         </x-nav-link>
                     @endcan
+                    @can(Permission::FinancialStatementsView->value)
+                        <x-nav-link :href="route('financial-statements.income-statement')" :active="request()->routeIs('financial-statements.*')" wire:navigate>
+                            États financiers
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -143,6 +148,11 @@ new class extends Component
             @can(Permission::AccountingView->value)
                 <x-responsive-nav-link :href="route('accounting.entries.index')" :active="request()->routeIs('accounting.*')" wire:navigate>
                     Comptabilité
+                </x-responsive-nav-link>
+            @endcan
+            @can(Permission::FinancialStatementsView->value)
+                <x-responsive-nav-link :href="route('financial-statements.income-statement')" :active="request()->routeIs('financial-statements.*')" wire:navigate>
+                    États financiers
                 </x-responsive-nav-link>
             @endcan
         </div>

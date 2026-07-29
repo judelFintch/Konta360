@@ -60,6 +60,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('accounting/periods', [AccountingPeriodController::class, 'index'])->name('accounting.periods.index');
     Route::post('accounting/periods', [AccountingPeriodController::class, 'store'])->name('accounting.periods.store');
     Route::patch('accounting/periods/{period}/close', [AccountingPeriodController::class, 'close'])->name('accounting.periods.close');
+    Route::get('financial-statements/income-statement', [AccountingReportController::class, 'incomeStatement'])->name('financial-statements.income-statement');
+    Route::get('financial-statements/income-statement/pdf', [AccountingReportController::class, 'incomeStatementPdf'])->name('financial-statements.income-statement.pdf');
+    Route::get('financial-statements/balance-sheet', [AccountingReportController::class, 'balanceSheet'])->name('financial-statements.balance-sheet');
+    Route::get('financial-statements/balance-sheet/pdf', [AccountingReportController::class, 'balanceSheetPdf'])->name('financial-statements.balance-sheet.pdf');
 });
 
 require __DIR__.'/auth.php';

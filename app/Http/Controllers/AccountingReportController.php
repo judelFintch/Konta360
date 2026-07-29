@@ -69,6 +69,56 @@ class AccountingReportController extends Controller
         ]);
     }
 
+    public function incomeStatement(Request $request): View
+    {
+        $this->requirePermission(Permission::FinancialStatementsView);
+        $filters = $this->filters($request);
+
+        return view('accounting.reports.income-statement', [
+            ...$filters,
+            ...$this->incomeStatementData($filters),
+        ]);
+    }
+
+    public function incomeStatementPdf(Request $request): Response
+    {
+        $this->requirePermission(Permission::FinancialStatementsView);
+        $this->requirePermission(Permission::ReportsExport);
+        $filters = $this->filters($request);
+
+        return Pdf::loadView('accounting.reports.income-statement-pdf', [
+            ...$filters,
+            ...$this->incomeStatementData($filters),
+        ])->setPaper('a4')->download(
+            "compte-resultat-{$filters['currency']}-{$filters['dateFrom']}-{$filters['dateTo']}.pdf"
+        );
+    }
+
+    public function balanceSheet(Request $request): View
+    {
+        $this->requirePermission(Permission::FinancialStatementsView);
+        $filters = $this->filters($request);
+
+        return view('accounting.reports.balance-sheet', [
+            ...$filters,
+            ...$this->balanceSheetData($filters),
+        ]);
+    }
+
+    public function balanceSheetPdf(Request $request): Response
+    {
+        $this->requirePermission(Permission::FinancialStatementsView);
+        $this->requirePermission(Permission::ReportsExport);
+        $filters = $this->filters($request);
+
+        return Pdf::loadView('accounting.reports.balance-sheet-pdf', [
+            ...$filters,
+            ...$this->balanceSheetData($filters),
+        ])->setPaper('a4')->download(
+            "bilan-{$filters['currency']}-{$filters['dateTo']}.pdf"
+        );
+    }
+
     /**
      * @return array{dateFrom: string, dateTo: string, currency: string}
      */
@@ -88,6 +138,62 @@ class AccountingReportController extends Controller
     }
 
     private function trialBalanceAccounts(array $filters)
+    {
+        return Account::query()
+            ->withSum([
+                'entryLines as total_debit' => fn (Builder $query) => $query
+                    ->whereHas('entry', fn (Builder $query) => $this->constrainEntries($query, $filters)),
+            ], 'debit')
+            ->withSum([
+                'entryLines as total_credit' => fn (Builder $query) => $query
+                    ->whereHas('entry', fn (Builder $query) => $this->constrainEntries($query, $filters)),
+            ], 'credit')
+            ->orderBy('code')
+            ->get()
+            ->filter(fn (Account $account) => (float) $account->total_debit !== 0.0 || (float) $account->total_credit !== 0.0)
+            ->values();
+    }
+
+    private function incomeStatementData(array $filters): array
+    {
+        $accounts = $this->accountsWithMovements($filters);
+        $revenues = $accounts->where('type', 'revenue')->values();
+        $expenses = $accounts->where('type', 'expense')->values();
+        $totalRevenue = round($revenues->sum(fn ($account) => (float) $account->total_credit - (float) $account->total_debit), 2);
+        $totalExpense = round($expenses->sum(fn ($account) => (float) $account->total_debit - (float) $account->total_credit), 2);
+
+        return compact('revenues', 'expenses', 'totalRevenue', 'totalExpense') + [
+            'netIncome' => round($totalRevenue - $totalExpense, 2),
+        ];
+    }
+
+    private function balanceSheetData(array $filters): array
+    {
+        $cumulativeFilters = [...$filters, 'dateFrom' => '1900-01-01'];
+        $accounts = $this->accountsWithMovements($cumulativeFilters);
+        $assets = $accounts->whereIn('type', ['asset', 'receivable'])->values();
+        $liabilities = $accounts->where('type', 'liability')->values();
+        $equity = $accounts->where('type', 'equity')->values();
+        $totalAssets = round($assets->sum(fn ($account) => (float) $account->total_debit - (float) $account->total_credit), 2);
+        $totalLiabilities = round($liabilities->sum(fn ($account) => (float) $account->total_credit - (float) $account->total_debit), 2);
+        $totalEquityAccounts = round($equity->sum(fn ($account) => (float) $account->total_credit - (float) $account->total_debit), 2);
+        $income = $this->incomeStatementData($cumulativeFilters);
+        $retainedIncome = $income['netIncome'];
+
+        return compact(
+            'assets',
+            'liabilities',
+            'equity',
+            'totalAssets',
+            'totalLiabilities',
+            'totalEquityAccounts',
+            'retainedIncome'
+        ) + [
+            'totalLiabilitiesAndEquity' => round($totalLiabilities + $totalEquityAccounts + $retainedIncome, 2),
+        ];
+    }
+
+    private function accountsWithMovements(array $filters)
     {
         return Account::query()
             ->withSum([

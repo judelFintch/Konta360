@@ -84,9 +84,13 @@
                 @endcan
 
                 <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6">
-                    <p class="text-sm font-medium text-gray-500">Prochaine étape</p>
-                    <h3 class="mt-1 text-lg font-semibold text-gray-900">Grand livre et balance</h3>
-                    <p class="mt-3 text-sm leading-6 text-gray-600">Analyser les mouvements et soldes par compte et par période.</p>
+                    <p class="text-sm font-medium text-gray-500">Pilotage</p>
+                    <h3 class="mt-1 text-lg font-semibold text-gray-900">États financiers</h3>
+                    @can(Permission::FinancialStatementsView->value)
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Consultez le compte de résultat et le bilan depuis la navigation principale.</p>
+                    @else
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Les états financiers sont réservés aux utilisateurs autorisés.</p>
+                    @endcan
                 </div>
             </div>
         </div>
