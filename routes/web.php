@@ -10,6 +10,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\QuoteController;
+use App\Http\Controllers\TreasuryController;
 use App\Modules\Administration\Enums\Permission;
 use Illuminate\Support\Facades\Route;
 
@@ -68,6 +69,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('invoices/{invoice}/payments/create', [PaymentController::class, 'create'])->name('payments.create');
     Route::post('invoices/{invoice}/payments', [PaymentController::class, 'store'])->name('payments.store');
     Route::patch('payments/{payment}/reverse', [PaymentController::class, 'reverse'])->name('payments.reverse');
+
+    Route::get('treasury', [TreasuryController::class, 'index'])->name('treasury.index');
+    Route::post('treasury/accounts', [TreasuryController::class, 'storeAccount'])->name('treasury.accounts.store');
+    Route::get('treasury/transactions/create', [TreasuryController::class, 'createTransaction'])->name('treasury.transactions.create');
+    Route::post('treasury/transactions', [TreasuryController::class, 'storeTransaction'])->name('treasury.transactions.store');
+    Route::post('treasury/payments/{payment}/assign', [TreasuryController::class, 'assignPayment'])->name('treasury.payments.assign');
 
     Route::get('accounting/entries', [AccountingEntryController::class, 'index'])->name('accounting.entries.index');
     Route::get('accounting/entries/{entry}', [AccountingEntryController::class, 'show'])->name('accounting.entries.show');

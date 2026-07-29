@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\PaymentRequest;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\TreasuryAccount;
+use App\Models\TreasuryTransaction;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Payments\Enums\PaymentStatus;
+use App\Modules\Treasury\Enums\TreasuryTransactionType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,8 +46,13 @@ class PaymentController extends Controller
         $this->requirePermission(Permission::PaymentsRecord);
         $invoice->load('party');
         $this->ensurePayable($invoice);
+        $treasuryAccounts = TreasuryAccount::query()
+            ->where('is_active', true)
+            ->where('currency', $invoice->currency)
+            ->orderBy('name')
+            ->get();
 
-        return view('payments.create', compact('invoice'));
+        return view('payments.create', compact('invoice', 'treasuryAccounts'));
     }
 
     public function store(PaymentRequest $request, Invoice $invoice, AccountingService $accounting): RedirectResponse
@@ -57,6 +65,17 @@ class PaymentController extends Controller
             $this->ensurePayable($invoice);
             $balance = $invoice->balanceDue();
             $amount = round((float) $data['amount'], 2);
+            $treasuryAccount = null;
+
+            if (TreasuryAccount::query()->where('is_active', true)->where('currency', $invoice->currency)->exists()) {
+                if (empty($data['treasury_account_id'])) {
+                    throw ValidationException::withMessages(['treasury_account_id' => 'Sélectionnez le compte qui reçoit le règlement.']);
+                }
+                $treasuryAccount = TreasuryAccount::query()->lockForUpdate()->findOrFail($data['treasury_account_id']);
+                if (! $treasuryAccount->is_active || $treasuryAccount->currency !== $invoice->currency) {
+                    throw ValidationException::withMessages(['treasury_account_id' => 'Ce compte de trésorerie ne peut pas recevoir ce règlement.']);
+                }
+            }
 
             if ($amount > $balance) {
                 throw ValidationException::withMessages([
@@ -76,6 +95,21 @@ class PaymentController extends Controller
                 'number' => sprintf('REG-%s-%05d', $payment->payment_date->format('Y'), $payment->id),
             ]);
             $accounting->postPayment($payment, auth()->id());
+            if ($treasuryAccount) {
+                $movement = TreasuryTransaction::create([
+                    'treasury_account_id' => $treasuryAccount->id,
+                    'type' => TreasuryTransactionType::Inflow,
+                    'transaction_date' => $payment->payment_date,
+                    'amount' => $payment->amount,
+                    'currency' => $payment->currency,
+                    'description' => "Règlement {$payment->number} — {$invoice->number}",
+                    'reference' => $payment->reference,
+                    'source_type' => 'payment',
+                    'source_id' => $payment->id,
+                    'created_by' => auth()->id(),
+                ]);
+                $movement->update(['number' => sprintf('TRES-%s-%05d', $movement->transaction_date->format('Y'), $movement->id)]);
+            }
         });
 
         return to_route('invoices.show', $invoice)->with('success', 'Le règlement a été enregistré.');
@@ -99,6 +133,25 @@ class PaymentController extends Controller
                 'reversal_reason' => trim($data['reversal_reason']),
             ]);
             $accounting->reversePayment($payment, auth()->id());
+            $originalMovement = TreasuryTransaction::query()
+                ->where('source_type', 'payment')
+                ->where('source_id', $payment->id)
+                ->first();
+            if ($originalMovement) {
+                $movement = TreasuryTransaction::create([
+                    'treasury_account_id' => $originalMovement->treasury_account_id,
+                    'type' => TreasuryTransactionType::Outflow,
+                    'transaction_date' => today(),
+                    'amount' => $payment->amount,
+                    'currency' => $payment->currency,
+                    'description' => "Annulation du règlement {$payment->number}",
+                    'reference' => $payment->reversal_reason,
+                    'source_type' => 'payment_reversal',
+                    'source_id' => $payment->id,
+                    'created_by' => auth()->id(),
+                ]);
+                $movement->update(['number' => sprintf('TRES-%s-%05d', $movement->transaction_date->format('Y'), $movement->id)]);
+            }
         });
 
         return back()->with('success', 'Le règlement a été annulé et reste visible dans l’historique.');

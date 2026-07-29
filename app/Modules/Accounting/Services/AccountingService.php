@@ -10,9 +10,11 @@ use App\Models\FixedAssetDepreciation;
 use App\Models\Invoice;
 use App\Models\Journal;
 use App\Models\Payment;
+use App\Models\TreasuryTransaction;
 use App\Modules\Accounting\Enums\EntryStatus;
 use App\Modules\Accounting\Enums\PeriodStatus;
 use App\Modules\Payments\Enums\PaymentMethod;
+use App\Modules\Treasury\Enums\TreasuryTransactionType;
 use LogicException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -130,6 +132,39 @@ class AccountingService
                 $this->line('68', "Dotation {$depreciation->asset->code}", (float) $depreciation->amount, 0),
                 $this->line('28', "Amortissement cumulé {$depreciation->asset->code}", 0, (float) $depreciation->amount),
             ],
+            $userId
+        );
+    }
+
+    public function postTreasuryTransaction(TreasuryTransaction $transaction, int $userId): AccountingEntry
+    {
+        $transaction->loadMissing(['account', 'destinationAccount']);
+        $sourceCode = $transaction->account->type->accountingCode();
+        $journalCode = $transaction->account->type->value === 'cash' ? 'CA' : 'BQ';
+
+        $lines = match ($transaction->type) {
+            TreasuryTransactionType::Inflow => [
+                $this->line($sourceCode, $transaction->description, (float) $transaction->amount, 0),
+                $this->line('75', $transaction->description, 0, (float) $transaction->amount),
+            ],
+            TreasuryTransactionType::Outflow => [
+                $this->line('65', $transaction->description, (float) $transaction->amount, 0),
+                $this->line($sourceCode, $transaction->description, 0, (float) $transaction->amount),
+            ],
+            TreasuryTransactionType::Transfer => [
+                $this->line($transaction->destinationAccount->type->accountingCode(), "Réception {$transaction->number}", (float) $transaction->amount, 0),
+                $this->line($sourceCode, "Envoi {$transaction->number}", 0, (float) $transaction->amount),
+            ],
+        };
+
+        return $this->post(
+            'treasury_transaction',
+            $transaction->id,
+            $journalCode,
+            $transaction->transaction_date->format('Y-m-d'),
+            "{$transaction->type->label()} {$transaction->number} — {$transaction->description}",
+            $transaction->currency,
+            $lines,
             $userId
         );
     }

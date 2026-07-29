@@ -3,6 +3,8 @@
 use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Payment;
+use App\Models\TreasuryAccount;
+use App\Models\TreasuryTransaction;
 use App\Models\User;
 use App\Modules\Administration\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Administration\Enums\Role;
@@ -10,6 +12,7 @@ use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Parties\Enums\PartyType;
 use App\Modules\Payments\Enums\PaymentMethod;
 use App\Modules\Payments\Enums\PaymentStatus;
+use App\Modules\Treasury\Enums\TreasuryAccountType;
 
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
@@ -75,6 +78,36 @@ it('accepts a final payment and marks the invoice as paid', function () {
 
     expect($this->invoice->balanceDue())->toBe(0.0)
         ->and($this->invoice->paymentLabel())->toBe('Payée');
+});
+
+it('adds a payment to the selected treasury account and removes it on reversal', function () {
+    $account = TreasuryAccount::create([
+        'name' => 'Banque règlements',
+        'type' => TreasuryAccountType::Bank,
+        'currency' => 'USD',
+        'opening_balance' => 100,
+        'is_active' => true,
+        'created_by' => $this->user->id,
+    ]);
+
+    $this->actingAs($this->user)->post(route('payments.store', $this->invoice), [
+        'payment_date' => today()->format('Y-m-d'),
+        'amount' => 400,
+        'method' => PaymentMethod::BankTransfer->value,
+        'treasury_account_id' => $account->id,
+    ])->assertRedirect();
+
+    $payment = Payment::firstOrFail();
+
+    expect($account->balance())->toBe(500.0)
+        ->and(TreasuryTransaction::where('source_type', 'payment')->count())->toBe(1);
+
+    $this->actingAs($this->user)
+        ->patch(route('payments.reverse', $payment), ['reversal_reason' => 'Virement rejeté'])
+        ->assertRedirect();
+
+    expect($account->balance())->toBe(100.0)
+        ->and(TreasuryTransaction::where('source_type', 'payment_reversal')->count())->toBe(1);
 });
 
 it('rejects an overpayment and leaves the ledger unchanged', function () {

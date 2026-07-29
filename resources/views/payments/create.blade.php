@@ -46,6 +46,18 @@
                         <x-text-input id="reference" name="reference" class="mt-1 block w-full" :value="old('reference')" />
                         <x-input-error :messages="$errors->get('reference')" class="mt-2" />
                     </div>
+                    @if ($treasuryAccounts->isNotEmpty())
+                        <div class="sm:col-span-2">
+                            <x-input-label for="treasury_account_id" value="Compte de trésorerie destinataire *" />
+                            <select id="treasury_account_id" name="treasury_account_id" class="mt-1 block w-full rounded-md border-gray-300" required>
+                                <option value="">Sélectionner un compte</option>
+                                @foreach($treasuryAccounts as $account)
+                                    <option value="{{ $account->id }}" @selected((string)old('treasury_account_id') === (string)$account->id)>{{ $account->name }} — {{ number_format($account->balance(), 2, ',', ' ') }} {{ $account->currency }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('treasury_account_id')" class="mt-2" />
+                        </div>
+                    @endif
                     <div class="sm:col-span-2">
                         <x-input-label for="notes" value="Notes" />
                         <textarea id="notes" name="notes" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('notes') }}</textarea>

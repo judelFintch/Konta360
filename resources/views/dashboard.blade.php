@@ -83,6 +83,16 @@
                     </a>
                 @endcan
 
+                @can(Permission::TreasuryManage->value)
+                    <a href="{{ route('treasury.index') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between">
+                            <div><p class="text-sm font-medium text-indigo-600">Finance</p><h3 class="mt-1 text-lg font-semibold text-gray-900">Trésorerie</h3></div>
+                            <span class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-600 group-hover:bg-indigo-100">→</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Suivre les banques, les caisses, les soldes et les mouvements internes.</p>
+                    </a>
+                @endcan
+
                 <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6">
                     <p class="text-sm font-medium text-gray-500">Patrimoine</p>
                     <h3 class="mt-1 text-lg font-semibold text-gray-900">Immobilisations</h3>
