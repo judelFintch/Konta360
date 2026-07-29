@@ -1,8 +1,21 @@
+@php use App\Modules\Accounting\Enums\EntryStatus; use App\Modules\Administration\Enums\Permission; @endphp
 <x-app-layout>
     <x-slot name="header">
-        <div><p class="text-sm font-medium text-indigo-600">{{ $entry->journal->code }} — {{ $entry->journal->name }}</p><h1 class="text-2xl font-semibold text-gray-900">{{ $entry->number }}</h1></div>
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p class="text-sm font-medium text-indigo-600">{{ $entry->journal->code }} — {{ $entry->journal->name }}</p><h1 class="text-2xl font-semibold text-gray-900">{{ $entry->number }}</h1></div>
+            @if ($entry->status === EntryStatus::Draft)
+                @can(Permission::AccountingEntriesPost->value)
+                    <form method="POST" action="{{ route('accounting.entries.post', $entry) }}" onsubmit="return confirm('Comptabiliser définitivement cette écriture ?')">
+                        @csrf
+                        @method('PATCH')
+                        <button class="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white">Comptabiliser</button>
+                    </form>
+                @endcan
+            @endif
+        </div>
     </x-slot>
     <div class="py-10"><div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        @if (session('success'))<div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>@endif
         <article class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
             <dl class="grid gap-5 border-b border-gray-200 pb-6 sm:grid-cols-4">
                 <div><dt class="text-xs uppercase tracking-wide text-gray-500">Date</dt><dd class="mt-1 font-semibold">{{ $entry->entry_date->format('d/m/Y') }}</dd></div>

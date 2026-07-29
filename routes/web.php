@@ -77,7 +77,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('treasury/payments/{payment}/assign', [TreasuryController::class, 'assignPayment'])->name('treasury.payments.assign');
 
     Route::get('accounting/entries', [AccountingEntryController::class, 'index'])->name('accounting.entries.index');
+    Route::get('accounting/entries/create', [AccountingEntryController::class, 'create'])->name('accounting.entries.create');
+    Route::post('accounting/entries', [AccountingEntryController::class, 'store'])->name('accounting.entries.store');
     Route::get('accounting/entries/{entry}', [AccountingEntryController::class, 'show'])->name('accounting.entries.show');
+    Route::patch('accounting/entries/{entry}/post', [AccountingEntryController::class, 'post'])->name('accounting.entries.post');
     Route::get('accounting/trial-balance', [AccountingReportController::class, 'trialBalance'])->name('accounting.trial-balance');
     Route::get('accounting/trial-balance/pdf', [AccountingReportController::class, 'trialBalancePdf'])->name('accounting.trial-balance.pdf');
     Route::get('accounting/ledger', [AccountingReportController::class, 'ledger'])->name('accounting.ledger');

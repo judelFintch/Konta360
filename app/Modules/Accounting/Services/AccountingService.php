@@ -169,6 +169,29 @@ class AccountingService
         );
     }
 
+    public function postManualEntry(AccountingEntry $entry, int $userId): AccountingEntry
+    {
+        $entry = AccountingEntry::query()->with('lines')->lockForUpdate()->findOrFail($entry->id);
+        if ($entry->status === EntryStatus::Posted) {
+            return $entry;
+        }
+
+        $this->ensurePeriodIsOpen($entry->entry_date->format('Y-m-d'));
+        $debit = round((float) $entry->lines->sum('debit'), 2);
+        $credit = round((float) $entry->lines->sum('credit'), 2);
+        if ($debit <= 0 || abs($debit - $credit) > 0.001) {
+            throw new LogicException("Écriture déséquilibrée : débit {$debit}, crédit {$credit}.");
+        }
+
+        $entry->update([
+            'status' => EntryStatus::Posted,
+            'posted_at' => now(),
+            'posted_by' => $userId,
+        ]);
+
+        return $entry;
+    }
+
     /**
      * @param  list<array{account_code: string, description: string, debit: float, credit: float}>  $lines
      */

@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div><p class="text-sm font-medium text-indigo-600">Comptabilité générale</p><h1 class="text-2xl font-semibold text-gray-900">Journal des écritures</h1></div>
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-sm font-medium text-indigo-600">Comptabilité générale</p><h1 class="text-2xl font-semibold text-gray-900">Journal des écritures</h1></div>@can(\App\Modules\Administration\Enums\Permission::AccountingEntriesCreate->value)<a href="{{ route('accounting.entries.create') }}" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">Nouvelle écriture</a>@endcan</div>
     </x-slot>
 
     <div class="py-10"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
