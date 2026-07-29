@@ -7,6 +7,7 @@ use App\Modules\FixedAssets\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'code', 'name', 'category', 'description', 'acquisition_date', 'in_service_date',
@@ -35,5 +36,10 @@ class FixedAsset extends Model
     public function depreciableAmount(): float
     {
         return round((float) $this->acquisition_cost - (float) $this->residual_value, 2);
+    }
+
+    public function depreciations(): HasMany
+    {
+        return $this->hasMany(FixedAssetDepreciation::class);
     }
 }

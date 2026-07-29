@@ -30,50 +30,58 @@ new class extends Component
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                <div class="hidden items-center gap-2 sm:ms-8 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
-                        Tableau de bord
+                        Accueil
                     </x-nav-link>
-                    @can(Permission::PartiesManage->value)
-                        <x-nav-link :href="route('parties.index')" :active="request()->routeIs('parties.*')" wire:navigate>
-                            Tiers
-                        </x-nav-link>
-                    @endcan
-                    @can(Permission::CatalogManage->value)
-                        <x-nav-link :href="route('catalog.index')" :active="request()->routeIs('catalog.*')" wire:navigate>
-                            Catalogue
-                        </x-nav-link>
-                    @endcan
-                    @can(Permission::QuotesView->value)
-                        <x-nav-link :href="route('quotes.index')" :active="request()->routeIs('quotes.*')" wire:navigate>
-                            Devis
-                        </x-nav-link>
-                    @endcan
-                    @can(Permission::InvoicesView->value)
-                        <x-nav-link :href="route('invoices.index')" :active="request()->routeIs('invoices.*')" wire:navigate>
-                            Factures
-                        </x-nav-link>
-                    @endcan
-                    @canany([Permission::PaymentsRecord->value, Permission::PaymentsReverse->value])
-                        <x-nav-link :href="route('payments.index')" :active="request()->routeIs('payments.*')" wire:navigate>
-                            Règlements
-                        </x-nav-link>
+
+                    @canany([Permission::QuotesView->value, Permission::InvoicesView->value, Permission::PaymentsRecord->value])
+                        <x-dropdown align="left" width="48">
+                            <x-slot name="trigger">
+                                <button class="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('quotes.*', 'invoices.*', 'payments.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                                    Ventes
+                                    <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                </button>
+                            </x-slot>
+                            <x-slot name="content">
+                                @can(Permission::QuotesView->value)<x-dropdown-link :href="route('quotes.index')" wire:navigate>Devis</x-dropdown-link>@endcan
+                                @can(Permission::InvoicesView->value)<x-dropdown-link :href="route('invoices.index')" wire:navigate>Factures</x-dropdown-link>@endcan
+                                @canany([Permission::PaymentsRecord->value, Permission::PaymentsReverse->value])<x-dropdown-link :href="route('payments.index')" wire:navigate>Règlements</x-dropdown-link>@endcanany
+                            </x-slot>
+                        </x-dropdown>
                     @endcanany
-                    @can(Permission::AccountingView->value)
-                        <x-nav-link :href="route('accounting.entries.index')" :active="request()->routeIs('accounting.*')" wire:navigate>
-                            Comptabilité
-                        </x-nav-link>
-                    @endcan
-                    @can(Permission::FinancialStatementsView->value)
-                        <x-nav-link :href="route('financial-statements.income-statement')" :active="request()->routeIs('financial-statements.*')" wire:navigate>
-                            États financiers
-                        </x-nav-link>
-                    @endcan
-                    @can(Permission::FixedAssetsManage->value)
-                        <x-nav-link :href="route('fixed-assets.index')" :active="request()->routeIs('fixed-assets.*')" wire:navigate>
-                            Immobilisations
-                        </x-nav-link>
-                    @endcan
+
+                    @canany([Permission::AccountingView->value, Permission::FinancialStatementsView->value])
+                        <x-dropdown align="left" width="48">
+                            <x-slot name="trigger">
+                                <button class="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('accounting.*', 'financial-statements.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                                    Comptabilité
+                                    <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                </button>
+                            </x-slot>
+                            <x-slot name="content">
+                                @can(Permission::AccountingView->value)<x-dropdown-link :href="route('accounting.entries.index')" wire:navigate>Journal et rapports</x-dropdown-link>@endcan
+                                @can(Permission::FinancialStatementsView->value)<x-dropdown-link :href="route('financial-statements.income-statement')" wire:navigate>États financiers</x-dropdown-link>@endcan
+                                @can(Permission::AccountingPeriodsClose->value)<x-dropdown-link :href="route('accounting.periods.index')" wire:navigate>Périodes et clôture</x-dropdown-link>@endcan
+                            </x-slot>
+                        </x-dropdown>
+                    @endcanany
+
+                    @canany([Permission::PartiesManage->value, Permission::CatalogManage->value, Permission::FixedAssetsManage->value])
+                        <x-dropdown align="left" width="48">
+                            <x-slot name="trigger">
+                                <button class="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('parties.*', 'catalog.*', 'fixed-assets.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                                    Référentiels
+                                    <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                </button>
+                            </x-slot>
+                            <x-slot name="content">
+                                @can(Permission::PartiesManage->value)<x-dropdown-link :href="route('parties.index')" wire:navigate>Clients et fournisseurs</x-dropdown-link>@endcan
+                                @can(Permission::CatalogManage->value)<x-dropdown-link :href="route('catalog.index')" wire:navigate>Produits et services</x-dropdown-link>@endcan
+                                @can(Permission::FixedAssetsManage->value)<x-dropdown-link :href="route('fixed-assets.index')" wire:navigate>Immobilisations</x-dropdown-link>@endcan
+                            </x-slot>
+                        </x-dropdown>
+                    @endcanany
                 </div>
             </div>
 

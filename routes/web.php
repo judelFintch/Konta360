@@ -35,6 +35,9 @@ Route::resource('fixed-assets', FixedAssetController::class)
     ->parameters(['fixed-assets' => 'fixedAsset'])
     ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
     ->middleware(['auth', 'verified', 'permission:'.Permission::FixedAssetsManage->value]);
+Route::post('fixed-assets/{fixedAsset}/depreciations', [FixedAssetController::class, 'postDepreciations'])
+    ->middleware(['auth', 'verified', 'permission:'.Permission::FixedAssetsManage->value])
+    ->name('fixed-assets.depreciations.store');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('quotes', QuoteController::class)

@@ -5,6 +5,7 @@ namespace App\Modules\Accounting\Services;
 use App\Models\Account;
 use App\Models\AccountingEntry;
 use App\Models\AccountingPeriod;
+use App\Models\FixedAssetDepreciation;
 use App\Models\Invoice;
 use App\Models\Journal;
 use App\Models\Payment;
@@ -84,6 +85,25 @@ class AccountingService
             "Annulation du règlement {$payment->number}",
             $payment->currency,
             $lines,
+            $userId
+        );
+    }
+
+    public function postDepreciation(FixedAssetDepreciation $depreciation, int $userId): AccountingEntry
+    {
+        $depreciation->loadMissing('asset');
+
+        return $this->post(
+            'fixed_asset_depreciation',
+            $depreciation->id,
+            'OD',
+            $depreciation->period_date->format('Y-m-d'),
+            "Dotation {$depreciation->asset->code} — {$depreciation->asset->name}",
+            $depreciation->asset->currency,
+            [
+                $this->line('68', "Dotation {$depreciation->asset->code}", (float) $depreciation->amount, 0),
+                $this->line('28', "Amortissement cumulé {$depreciation->asset->code}", 0, (float) $depreciation->amount),
+            ],
             $userId
         );
     }

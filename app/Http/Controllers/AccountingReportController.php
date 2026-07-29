@@ -171,7 +171,7 @@ class AccountingReportController extends Controller
     {
         $cumulativeFilters = [...$filters, 'dateFrom' => '1900-01-01'];
         $accounts = $this->accountsWithMovements($cumulativeFilters);
-        $assets = $accounts->whereIn('type', ['asset', 'receivable'])->values();
+        $assets = $accounts->whereIn('type', ['asset', 'receivable', 'contra_asset'])->values();
         $liabilities = $accounts->where('type', 'liability')->values();
         $equity = $accounts->where('type', 'equity')->values();
         $totalAssets = round($assets->sum(fn ($account) => (float) $account->total_debit - (float) $account->total_credit), 2);
