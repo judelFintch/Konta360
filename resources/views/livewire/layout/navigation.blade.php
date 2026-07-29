@@ -55,7 +55,7 @@ new class extends Component
                     @canany([Permission::AccountingView->value, Permission::FinancialStatementsView->value, Permission::TreasuryManage->value])
                         <x-dropdown align="left" width="48">
                             <x-slot name="trigger">
-                                <button class="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('accounting.*', 'financial-statements.*', 'treasury.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                                <button class="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('accounting.*', 'financial-statements.*', 'treasury.*', 'expenses.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                                     Comptabilité
                                     <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                                 </button>
@@ -63,6 +63,7 @@ new class extends Component
                             <x-slot name="content">
                                 @can(Permission::AccountingView->value)<x-dropdown-link :href="route('accounting.entries.index')" wire:navigate>Journal et rapports</x-dropdown-link>@endcan
                                 @can(Permission::TreasuryManage->value)<x-dropdown-link :href="route('treasury.index')" wire:navigate>Trésorerie</x-dropdown-link>@endcan
+                                @can(Permission::AccountingView->value)<x-dropdown-link :href="route('expenses.index')" wire:navigate>Dépenses fournisseurs</x-dropdown-link>@endcan
                                 @can(Permission::FinancialStatementsView->value)<x-dropdown-link :href="route('financial-statements.income-statement')" wire:navigate>États financiers</x-dropdown-link>@endcan
                                 @can(Permission::AccountingPeriodsClose->value)<x-dropdown-link :href="route('accounting.periods.index')" wire:navigate>Périodes et clôture</x-dropdown-link>@endcan
                             </x-slot>
@@ -171,6 +172,11 @@ new class extends Component
             @can(Permission::TreasuryManage->value)
                 <x-responsive-nav-link :href="route('treasury.index')" :active="request()->routeIs('treasury.*')" wire:navigate>
                     Trésorerie
+                </x-responsive-nav-link>
+            @endcan
+            @can(Permission::AccountingView->value)
+                <x-responsive-nav-link :href="route('expenses.index')" :active="request()->routeIs('expenses.*')" wire:navigate>
+                    Dépenses fournisseurs
                 </x-responsive-nav-link>
             @endcan
             @can(Permission::FinancialStatementsView->value)

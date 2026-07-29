@@ -6,6 +6,8 @@ use App\Models\Account;
 use App\Models\AccountingEntry;
 use App\Models\AccountingPeriod;
 use App\Models\CreditNote;
+use App\Models\Expense;
+use App\Models\ExpensePayment;
 use App\Models\FixedAssetDepreciation;
 use App\Models\Invoice;
 use App\Models\Journal;
@@ -40,6 +42,49 @@ class AccountingService
             "Facture {$invoice->number} — {$invoice->party()->value('name')}",
             $invoice->currency,
             $lines,
+            $userId
+        );
+    }
+
+    public function postExpense(Expense $expense, int $userId): AccountingEntry
+    {
+        $lines = [
+            $this->line('60', "Charge {$expense->number}", (float) $expense->subtotal, 0),
+        ];
+        if ((float) $expense->tax_total > 0) {
+            $lines[] = $this->line('445', "Taxe déductible {$expense->number}", (float) $expense->tax_total, 0);
+        }
+        $lines[] = $this->line('401', "Dette fournisseur {$expense->number}", 0, (float) $expense->total);
+
+        return $this->post(
+            'expense',
+            $expense->id,
+            'AC',
+            $expense->expense_date->format('Y-m-d'),
+            "Dépense {$expense->number} — {$expense->description}",
+            $expense->currency,
+            $lines,
+            $userId
+        );
+    }
+
+    public function postExpensePayment(ExpensePayment $payment, int $userId): AccountingEntry
+    {
+        $payment->loadMissing('treasuryAccount');
+        $cashCode = $payment->treasuryAccount->type->accountingCode();
+        $journal = $payment->treasuryAccount->type->value === 'cash' ? 'CA' : 'BQ';
+
+        return $this->post(
+            'expense_payment',
+            $payment->id,
+            $journal,
+            $payment->payment_date->format('Y-m-d'),
+            "Paiement fournisseur {$payment->number}",
+            $payment->currency,
+            [
+                $this->line('401', "Dette réglée {$payment->number}", (float) $payment->amount, 0),
+                $this->line($cashCode, "Décaissement {$payment->number}", 0, (float) $payment->amount),
+            ],
             $userId
         );
     }

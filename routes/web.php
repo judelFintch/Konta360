@@ -6,6 +6,8 @@ use App\Http\Controllers\AccountingReportController;
 use App\Http\Controllers\BankReconciliationController;
 use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\CreditNoteController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
@@ -17,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
 
-Route::view('dashboard', 'dashboard')
+Route::get('dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
@@ -70,6 +72,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('invoices/{invoice}/payments/create', [PaymentController::class, 'create'])->name('payments.create');
     Route::post('invoices/{invoice}/payments', [PaymentController::class, 'store'])->name('payments.store');
     Route::patch('payments/{payment}/reverse', [PaymentController::class, 'reverse'])->name('payments.reverse');
+
+    Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+    Route::get('expenses/create', [ExpenseController::class, 'create'])->name('expenses.create');
+    Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+    Route::get('expenses/{expense}', [ExpenseController::class, 'show'])->name('expenses.show');
+    Route::patch('expenses/{expense}/validate', [ExpenseController::class, 'validateExpense'])->name('expenses.validate');
+    Route::post('expenses/{expense}/payments', [ExpenseController::class, 'pay'])->name('expenses.pay');
 
     Route::get('treasury', [TreasuryController::class, 'index'])->name('treasury.index');
     Route::post('treasury/accounts', [TreasuryController::class, 'storeAccount'])->name('treasury.accounts.store');
