@@ -4,6 +4,7 @@
     </x-slot>
 
     <div class="py-10"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        @include('accounting.reports._navigation')
         <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Le plan comptable initial est provisoire. Les comptes 411, 4431, 70, 512 et 571 doivent être validés avant la production.
         </div>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountingEntryController;
+use App\Http\Controllers\AccountingReportController;
 use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
@@ -52,6 +53,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('accounting/entries', [AccountingEntryController::class, 'index'])->name('accounting.entries.index');
     Route::get('accounting/entries/{entry}', [AccountingEntryController::class, 'show'])->name('accounting.entries.show');
+    Route::get('accounting/trial-balance', [AccountingReportController::class, 'trialBalance'])->name('accounting.trial-balance');
+    Route::get('accounting/trial-balance/pdf', [AccountingReportController::class, 'trialBalancePdf'])->name('accounting.trial-balance.pdf');
+    Route::get('accounting/ledger', [AccountingReportController::class, 'ledger'])->name('accounting.ledger');
 });
 
 require __DIR__.'/auth.php';
