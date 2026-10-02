@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InvoiceDraftRequest;
-use App\Models\Invoice;
 use App\Models\CompanySetting;
+use App\Models\Invoice;
 use App\Models\Quote;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Quotes\Enums\QuoteStatus;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -63,9 +63,8 @@ class InvoiceController extends Controller
         $this->requirePermission(Permission::InvoicesView);
         $filename = ($invoice->number ?: 'facture-brouillon-'.$invoice->id).'.pdf';
 
-        return Pdf::loadView('documents.commercial', $this->documentData($invoice, true))
-            ->setPaper('a4')
-            ->download($filename);
+        return app(CommercialDocumentPresenter::class)
+            ->download($this->documentData($invoice, true), $filename);
     }
 
     public function convert(Quote $quote): RedirectResponse
@@ -174,14 +173,21 @@ class InvoiceController extends Controller
 
     private function documentData(Invoice $invoice, bool $forPdf): array
     {
-        $invoice->load(['party', 'lines']);
+        $invoice->load(['party', 'lines', 'quote', 'creator']);
 
         return [
+            ...app(CommercialDocumentPresenter::class)->present($invoice),
             'document' => $invoice,
             'documentType' => 'Facture',
             'documentNumber' => $invoice->number ?: 'Brouillon #'.$invoice->id,
             'secondaryDateLabel' => 'Échéance',
             'secondaryDate' => $invoice->due_date,
+            'reference' => $invoice->quote ? ['Devis d’origine', $invoice->quote->number] : null,
+            'settlement' => $invoice->status === InvoiceStatus::Validated ? [
+                'credited' => $invoice->creditedAmount(),
+                'paid' => $invoice->paidAmount(),
+                'balance' => $invoice->balanceDue(),
+            ] : null,
             'backUrl' => route('invoices.show', $invoice),
             'pdfUrl' => route('invoices.pdf', $invoice),
             'forPdf' => $forPdf,

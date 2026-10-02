@@ -1,50 +1,122 @@
-@php $company = \App\Models\CompanySetting::current(); @endphp
+@php
+    $money = fn ($value) => number_format((float) $value, 2, ',', ' ');
+    $asset = fn (string $type) => $forPdf
+        ? Storage::disk('public')->path($company->{$type.'_path'})
+        : route('administration.company.asset', $type);
+    $isQuote = $document instanceof \App\Models\Quote;
+    $netTotal = (float) $document->subtotal - (float) $document->discount_total;
+    $legalIds = array_filter([
+        'NIF' => $company->tax_identifier,
+        'RCCM' => $company->trade_register,
+        'ID Nat' => $company->national_identifier,
+        'CNSS' => $company->cnss_number,
+    ]);
+    $missingSettings = array_keys(array_filter([
+        'numéro fiscal (NIF)' => blank($company->tax_identifier),
+        'RCCM' => blank($company->trade_register),
+        'adresse' => blank($company->address),
+        'raison sociale' => $company->name === config('app.name'),
+    ]));
+@endphp
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <title>{{ $documentType }} {{ $documentNumber }}</title>
+    <title>{{ $documentType }} {{ $documentNumber }} — {{ $company->name }}</title>
     <style>
-        @page { margin: 20mm 16mm; }
+        @page { margin: 14mm 14mm 24mm 14mm; }
         * { box-sizing: border-box; }
-        body { margin: 0; color: #18212f; font-family: DejaVu Sans, sans-serif; font-size: 11px; line-height: 1.45; }
-        .toolbar { display: flex; justify-content: center; gap: 10px; padding: 14px; background: #111827; position: sticky; top: 0; }
-        .toolbar a, .toolbar button { border: 0; border-radius: 6px; padding: 9px 14px; cursor: pointer; color: #fff; background: #4f46e5; font: 600 13px sans-serif; text-decoration: none; }
-        .toolbar .secondary { background: #374151; }
-        .page { max-width: 210mm; min-height: 270mm; margin: 20px auto; padding: 14mm; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.12); }
-        .header { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
-        .header td { width: 50%; vertical-align: top; }
-        .brand { color: #4f46e5; font-size: 23px; font-weight: bold; }
-        .logo { max-width: 150px; max-height: 70px; margin-bottom: 8px; }
-        .approval-assets { display: flex; align-items: end; justify-content: flex-end; gap: 18px; margin-top: 28px; }
-        .approval-assets img { max-width: 115px; max-height: 75px; object-fit: contain; }
-        .document-title { margin: 0; color: #111827; font-size: 25px; text-transform: uppercase; }
-        .muted { color: #6b7280; }
+        body { margin: 0; color: #1f2937; font-family: DejaVu Sans, sans-serif; font-size: 9px; line-height: 1.3; background: #e5e7eb; }
+        table { width: 100%; border-collapse: collapse; }
+        td, th { vertical-align: top; }
         .right { text-align: right; }
-        .badge { display: inline-block; margin-top: 6px; padding: 4px 9px; border-radius: 20px; color: #3730a3; background: #e0e7ff; font-size: 9px; font-weight: bold; text-transform: uppercase; }
-        .parties { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
-        .parties td { width: 50%; padding: 14px; vertical-align: top; border: 1px solid #e5e7eb; }
-        .parties td:first-child { background: #f9fafb; }
-        .label { margin-bottom: 7px; color: #6b7280; font-size: 8px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; }
-        .party-name { margin-bottom: 3px; font-size: 14px; font-weight: bold; }
-        .lines { width: 100%; border-collapse: collapse; }
-        .lines th { padding: 9px 7px; color: #4b5563; background: #f3f4f6; border-bottom: 1px solid #d1d5db; font-size: 8px; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
-        .lines td { padding: 10px 7px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-        .lines .number { text-align: right; white-space: nowrap; }
-        .sku { margin-top: 2px; color: #6b7280; font-size: 9px; }
-        .summary-wrap { width: 100%; margin-top: 18px; }
-        .summary { width: 42%; margin-left: auto; border-collapse: collapse; }
-        .summary td { padding: 5px 0; }
-        .summary td:last-child { text-align: right; white-space: nowrap; font-weight: bold; }
-        .summary .grand td { padding-top: 10px; border-top: 2px solid #111827; font-size: 14px; }
-        .notes { margin-top: 28px; padding: 13px; background: #f9fafb; border-left: 3px solid #4f46e5; white-space: pre-line; }
-        .footer { margin-top: 40px; padding-top: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; font-size: 9px; text-align: center; }
+        .center { text-align: center; }
+        .muted { color: #6b7280; }
+        .strong { font-weight: bold; }
+        .nowrap { white-space: nowrap; }
+        .mono { font-family: DejaVu Sans Mono, monospace; }
+
+        /* Barre d’outils écran */
+        .toolbar { position: sticky; top: 0; z-index: 10; padding: 12px; text-align: center; background: #111827; }
+        .toolbar a, .toolbar button { display: inline-block; margin: 0 4px; padding: 9px 16px; border: 0; border-radius: 6px; color: #fff; background: #4338ca; font: 600 13px system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+        .toolbar .secondary { background: #374151; }
+        .alert { max-width: 210mm; margin: 16px auto 0; padding: 12px 16px; border: 1px solid #fcd34d; border-radius: 8px; color: #78350f; background: #fffbeb; font: 13px system-ui, sans-serif; }
+        .alert a { color: #78350f; font-weight: 600; }
+
+        .page { position: relative; max-width: 210mm; min-height: 297mm; margin: 16px auto 32px; padding: 14mm 14mm 30mm; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.12); overflow: hidden; }
+        .accent { height: 4px; margin: -14mm -14mm 8mm; background: #1e3a8a; }
+
+        /* En-tête */
+        .logo { max-width: 170px; max-height: 64px; margin-bottom: 6px; }
+        .company-name { color: #111827; font-size: 17px; font-weight: bold; line-height: 1.2; }
+        .company-meta { margin-top: 4px; color: #4b5563; font-size: 9px; }
+        .doc-title { margin: 0; color: #1e3a8a; font-size: 26px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+        .meta { width: auto; margin: 6px 0 0 auto; }
+        .meta td { padding: 1px 0 1px 14px; }
+        .meta td:first-child { color: #6b7280; }
+        .status { display: inline-block; padding: 2px 8px; border-radius: 10px; color: #1e3a8a; background: #dbeafe; font-size: 8px; font-weight: bold; text-transform: uppercase; }
+
+        /* Blocs émetteur / client */
+        .boxes { margin-top: 14px; }
+        .boxes > tbody > tr > td { width: 50%; }
+        .box { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 4px; }
+        .box.client { border-color: #1e3a8a; }
+        .label { margin-bottom: 5px; color: #6b7280; font-size: 7.5px; font-weight: bold; letter-spacing: .8px; text-transform: uppercase; }
+        .party-name { color: #111827; font-size: 12px; font-weight: bold; }
+
+        /* Lignes */
+        .lines { margin-top: 14px; }
+        .lines th { padding: 7px 6px; color: #fff; background: #1e3a8a; font-size: 7.5px; text-align: left; text-transform: uppercase; letter-spacing: .4px; }
+        .lines td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; }
+        .lines tbody tr:nth-child(even) td { background: #f9fafb; }
+        .lines .num { text-align: right; white-space: nowrap; }
+        .sku { color: #6b7280; font-size: 8px; }
+
+        /* Totaux */
+        .summary { margin-top: 14px; }
+        .summary > tbody > tr > td:first-child { width: 56%; padding-right: 18px; }
+        .tax-table th { padding: 4px 6px; color: #4b5563; background: #f3f4f6; font-size: 7.5px; text-align: right; text-transform: uppercase; }
+        .tax-table th:first-child, .tax-table td:first-child { text-align: left; }
+        .tax-table td { padding: 4px 6px; border-bottom: 1px solid #f3f4f6; text-align: right; }
+        .words { margin-top: 10px; padding: 8px 10px; border-left: 3px solid #1e3a8a; background: #f9fafb; }
+        .totals td { padding: 3px 8px; }
+        .totals td:last-child { text-align: right; white-space: nowrap; }
+        .totals .grand td { padding: 6px 8px; color: #fff; background: #1e3a8a; font-size: 12px; font-weight: bold; }
+        .totals .due td { padding: 6px 8px; border-top: 2px solid #1e3a8a; border-bottom: 2px solid #1e3a8a; font-size: 11px; font-weight: bold; }
+
+        .section { margin-top: 10px; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 4px; white-space: pre-line; }
+
+        /* Signatures */
+        .signatures { margin-top: 12px; }
+        .signatures > tbody > tr > td { width: 50%; }
+        .sign-box { height: 78px; padding: 8px 10px; border: 1px dashed #9ca3af; border-radius: 4px; }
+        .sign-box img { max-height: 56px; max-width: 110px; margin-right: 8px; }
+
+        /* Contrôle */
+        .control { margin-top: 12px; }
+        .qr { width: 78px; height: 78px; }
+        .code { color: #111827; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
+
+        /* Filigrane */
+        .watermark { position: absolute; top: 42%; left: 0; right: 0; color: rgba(220, 38, 38, .12); font-size: 96px; font-weight: bold; text-align: center; text-transform: uppercase; transform: rotate(-30deg); z-index: 0; }
+
+        /* Pied de page légal */
+        .footer { position: absolute; left: 14mm; right: 14mm; bottom: 10mm; padding-top: 6px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 7.5px; text-align: center; }
+        
         @media print {
+            body { background: #fff; }
             .no-print { display: none !important; }
-            .page { max-width: none; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+            .page { max-width: none; min-height: 0; margin: 0; padding: 0; box-shadow: none; overflow: visible; }
+            .accent { margin: 0 0 8mm; }
+            .footer { position: fixed; left: 0; right: 0; bottom: 0; }
+            .watermark { position: fixed; }
         }
         @if ($forPdf)
-            .page { max-width: none; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+            body { background: #fff; }
+            .page { max-width: none; min-height: 0; margin: 0; padding: 0; box-shadow: none; overflow: visible; }
+            .accent { margin: 0 0 8mm; }
+            .footer { position: fixed; left: 0; right: 0; bottom: -14mm; }
+            .watermark { position: fixed; }
         @endif
     </style>
 </head>
@@ -55,112 +127,221 @@
             <button type="button" onclick="window.print()">Imprimer</button>
             <a href="{{ $pdfUrl }}">Télécharger PDF</a>
         </div>
+        @if ($missingSettings)
+            <div class="alert no-print">
+                <strong>Informations de l’entreprise incomplètes :</strong> {{ implode(', ', $missingSettings) }}.
+                Ces mentions sont attendues sur un document commercial.
+                @can(\App\Modules\Administration\Enums\Permission::SettingsManage->value)
+                    <a href="{{ route('administration.company.edit') }}">Compléter les paramètres</a>
+                @endcan
+            </div>
+        @endif
     @endunless
 
     <main class="page">
-        <table class="header">
+        @if ($watermark)<div class="watermark">{{ $watermark }}</div>@endif
+        <div class="accent"></div>
+
+        <!-- En-tête : entreprise et identification du document -->
+        <table>
             <tr>
-                <td>
-                    @if($company->logo_path)<img class="logo" src="{{ $forPdf ? Storage::disk('public')->path($company->logo_path) : route('administration.company.asset', 'logo') }}" alt="Logo">@endif
-                    <div class="brand">{{ $company->name }}</div>
-                    @if($company->legal_form)<div class="muted">{{ $company->legal_form }}</div>@endif
-                    <div class="muted">Gestion commerciale et comptable</div>
+                <td style="width: 55%">
+                    @if ($company->logo_path)<img class="logo" src="{{ $asset('logo') }}" alt="{{ $company->name }}"><br>@endif
+                    <div class="company-name">{{ $company->name }}@if ($company->legal_form) <span class="muted" style="font-size: 11px; font-weight: normal">{{ $company->legal_form }}</span>@endif</div>
+                    <div class="company-meta">
+                        @if ($company->address){!! nl2br(e($company->address)) !!}<br>@endif
+                        {{ implode(' · ', array_filter([$company->phone ? 'Tél. '.$company->phone : null, $company->email, $company->website])) }}
+                    </div>
                 </td>
                 <td class="right">
-                    <h1 class="document-title">{{ $documentType }}</h1>
-                    <div><strong>{{ $documentNumber }}</strong></div>
-                    <span class="badge">{{ $document->status->label() }}</span>
+                    <h1 class="doc-title">{{ $documentType }}</h1>
+                    <table class="meta">
+                        <tr><td>N°</td><td class="strong nowrap">{{ $documentNumber }}</td></tr>
+                        <tr><td>Date d’émission</td><td class="strong">{{ $document->issue_date->format('d/m/Y') }}</td></tr>
+                        @isset($secondaryDate)
+                            <tr><td>{{ $secondaryDateLabel }}</td><td class="strong">{{ $secondaryDate->format('d/m/Y') }}</td></tr>
+                        @endisset
+                        @if ($reference ?? null)
+                            <tr><td>{{ $reference[0] }}</td><td class="strong">{{ $reference[1] }}</td></tr>
+                        @endif
+                        <tr><td>Devise</td><td class="strong">{{ $document->currency }}</td></tr>
+                        <tr><td>Statut</td><td><span class="status">{{ $document->status->label() }}</span></td></tr>
+                    </table>
                 </td>
             </tr>
         </table>
 
-        <table class="parties">
+        <!-- Émetteur et client -->
+        <table class="boxes">
             <tr>
-                <td>
-                    <div class="label">Émetteur</div>
-                    <div class="party-name">{{ $company->name }}</div>
-                    @if($company->tax_identifier)<div>N° fiscal : {{ $company->tax_identifier }}</div>@endif
-                    @if($company->national_identifier)<div>ID Nat : {{ $company->national_identifier }}</div>@endif
-                    @if($company->cnss_number)<div>CNSS : {{ $company->cnss_number }}</div>@endif
-                    @if($company->trade_register)<div>RCCM : {{ $company->trade_register }}</div>@endif
-                    @if($company->address)<div>{!! nl2br(e($company->address)) !!}</div>@endif
-                    @if($company->email)<div>{{ $company->email }}</div>@endif
-                    @if($company->phone)<div>{{ $company->phone }}</div>@endif
+                <td style="padding-right: 8px">
+                    <div class="box">
+                        <div class="label">Émetteur</div>
+                        <div class="party-name">{{ $company->name }}</div>
+                        @foreach ($legalIds as $label => $value)<div><span class="muted">{{ $label }} :</span> {{ $value }}</div>@endforeach
+                        @if ($company->representative_name)<div><span class="muted">Représenté par :</span> {{ $company->representative_name }}@if ($company->representative_title), {{ $company->representative_title }}@endif</div>@endif
+                    </div>
                 </td>
-                <td>
-                    <div class="label">Client</div>
-                    <div class="party-name">{{ $document->party->name }}</div>
-                    @if ($document->party->tax_identifier)<div>N° fiscal : {{ $document->party->tax_identifier }}</div>@endif
-                    @if ($document->party->address)<div>{!! nl2br(e($document->party->address)) !!}</div>@endif
-                    @if ($document->party->email)<div>{{ $document->party->email }}</div>@endif
-                    @if ($document->party->phone)<div>{{ $document->party->phone }}</div>@endif
+                <td style="padding-left: 8px">
+                    <div class="box client">
+                        <div class="label">{{ $isQuote ? 'Adressé à' : 'Facturé à' }}</div>
+                        <div class="party-name">{{ $document->party->name }}</div>
+                        @if ($document->party->tax_identifier)<div><span class="muted">NIF :</span> {{ $document->party->tax_identifier }}</div>@endif
+                        @if ($document->party->address)<div>{!! nl2br(e($document->party->address)) !!}</div>@endif
+                        @if ($document->party->phone || $document->party->email)<div>{{ implode(' · ', array_filter([$document->party->phone, $document->party->email])) }}</div>@endif
+                    </div>
                 </td>
             </tr>
         </table>
 
-        <table style="width: 100%; margin-bottom: 20px;">
-            <tr>
-                <td><span class="muted">Date d’émission :</span> <strong>{{ $document->issue_date->format('d/m/Y') }}</strong></td>
-                <td class="right"><span class="muted">{{ $secondaryDateLabel }} :</span> <strong>{{ $secondaryDateValue ?? $secondaryDate->format('d/m/Y') }}</strong></td>
-            </tr>
-        </table>
-
+        <!-- Lignes -->
         <table class="lines">
             <thead>
                 <tr>
-                    <th style="width: 38%">Désignation</th>
-                    <th class="number">Quantité</th>
-                    <th class="number">Prix HT</th>
-                    <th class="number">Remise</th>
-                    <th class="number">Taxe</th>
-                    <th class="number">Total TTC</th>
+                    <th style="width: 4%">N°</th>
+                    <th style="width: 36%">Désignation</th>
+                    <th class="num">Qté</th>
+                    <th class="num">P.U. HT</th>
+                    <th class="num">Rem.</th>
+                    <th class="num">TVA</th>
+                    <th class="num">Montant HT</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($document->lines as $line)
                     <tr>
-                        <td><strong>{{ $line->description }}</strong><div class="sku">{{ $line->sku }} · {{ $line->unit }}</div></td>
-                        <td class="number">{{ number_format((float) $line->quantity, 3, ',', ' ') }}</td>
-                        <td class="number">{{ number_format((float) $line->unit_price, 2, ',', ' ') }}</td>
-                        <td class="number">{{ number_format((float) $line->discount_rate, 2, ',', ' ') }} %</td>
-                        <td class="number">{{ number_format((float) $line->tax_amount, 2, ',', ' ') }}</td>
-                        <td class="number"><strong>{{ number_format((float) $line->total, 2, ',', ' ') }}</strong></td>
+                        <td class="muted">{{ $loop->iteration }}</td>
+                        <td><span class="strong">{{ $line->description }}</span><br><span class="sku">Réf. {{ $line->sku }}</span></td>
+                        <td class="num">{{ rtrim(rtrim(number_format((float) $line->quantity, 3, ',', ' '), '0'), ',') }} <span class="sku">{{ $line->unit }}</span></td>
+                        <td class="num">{{ $money($line->unit_price) }}</td>
+                        <td class="num">{{ (float) $line->discount_rate > 0 ? $money($line->discount_rate).' %' : '—' }}</td>
+                        <td class="num">{{ $money($line->tax_rate) }} %</td>
+                        <td class="num strong">{{ $money((float) $line->subtotal - (float) $line->discount_amount) }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
 
-        <div class="summary-wrap">
-            <table class="summary">
-                <tr><td class="muted">Sous-total HT</td><td>{{ number_format((float) $document->subtotal, 2, ',', ' ') }} {{ $document->currency }}</td></tr>
-                <tr><td class="muted">Remises</td><td>− {{ number_format((float) $document->discount_total, 2, ',', ' ') }} {{ $document->currency }}</td></tr>
-                <tr><td class="muted">Taxes</td><td>{{ number_format((float) $document->tax_total, 2, ',', ' ') }} {{ $document->currency }}</td></tr>
-                <tr class="grand"><td>Total TTC</td><td>{{ number_format((float) $document->total, 2, ',', ' ') }} {{ $document->currency }}</td></tr>
-            </table>
-        </div>
+        <!-- Récapitulatif TVA, montant en lettres et totaux -->
+        <table class="summary">
+            <tr>
+                <td>
+                    <table class="tax-table">
+                        <thead><tr><th>Taux TVA</th><th>Base HT</th><th>Montant TVA</th></tr></thead>
+                        <tbody>
+                            @foreach ($taxBreakdown as $row)
+                                <tr><td>{{ $money($row['rate']) }} %</td><td>{{ $money($row['base']) }}</td><td>{{ $money($row['tax']) }}</td></tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    <div class="words">
+                        <div class="label">{{ match (true) { $isQuote => 'Le présent devis s’élève à la somme de', $document instanceof \App\Models\CreditNote => 'Arrêté le présent avoir à la somme de', default => 'Arrêtée la présente facture à la somme de' } }}</div>
+                        <span class="strong">{{ $amountInWords }}</span>&nbsp;TTC.
+                    </div>
+                </td>
+                <td>
+                    <table class="totals">
+                        <tr><td class="muted">Total brut HT</td><td>{{ $money($document->subtotal) }}</td></tr>
+                        @if ((float) $document->discount_total > 0)
+                            <tr><td class="muted">Remises</td><td>− {{ $money($document->discount_total) }}</td></tr>
+                        @endif
+                        <tr><td class="muted">Total net HT</td><td>{{ $money($netTotal) }}</td></tr>
+                        <tr><td class="muted">Total TVA</td><td>{{ $money($document->tax_total) }}</td></tr>
+                        <tr class="grand"><td>Total TTC</td><td>{{ $money($document->total) }} {{ $document->currency }}</td></tr>
+                        @if ($settlement ?? null)
+                            @if ($settlement['credited'] > 0)<tr><td class="muted">Avoirs imputés</td><td>− {{ $money($settlement['credited']) }}</td></tr>@endif
+                            @if ($settlement['paid'] > 0)<tr><td class="muted">Règlements reçus</td><td>− {{ $money($settlement['paid']) }}</td></tr>@endif
+                            <tr class="due"><td>Net à payer</td><td>{{ $money($settlement['balance']) }} {{ $document->currency }}</td></tr>
+                        @endif
+                    </table>
+                </td>
+            </tr>
+        </table>
 
         @if ($notesText ?? $document->notes)
-            <div class="notes"><div class="label">{{ $notesLabel ?? 'Notes et conditions' }}</div>{{ $notesText ?? $document->notes }}</div>
+            <div class="section"><div class="label">{{ $notesLabel ?? 'Notes' }}</div>{{ $notesText ?? $document->notes }}</div>
         @endif
 
-        @if($company->bank_name || $company->mobile_money)
-            <div class="notes"><div class="label">Coordonnées de paiement</div>
-                @if($company->bank_name)<strong>{{ $company->bank_name }}</strong>@endif
-                @if($company->bank_account_name) — {{ $company->bank_account_name }}@endif
-                @if($company->bank_account_number)<br>Compte : {{ $company->bank_account_number }}@endif
-                @if($company->bank_swift) · SWIFT : {{ $company->bank_swift }}@endif
-                @if($company->mobile_money)<br>Mobile Money : {{ $company->mobile_money }}@endif
-            </div>
+        @if (! $isQuote || $company->invoice_footer)
+            <table style="margin-top: 0">
+                <tr>
+                    @if ($company->bank_name || $company->mobile_money)
+                        <td style="width: 50%; padding-right: 8px">
+                            <div class="section" style="white-space: normal">
+                                <div class="label">Modalités de paiement</div>
+                                @if ($company->bank_name)<span class="strong">{{ $company->bank_name }}</span>@if ($company->bank_account_name) — {{ $company->bank_account_name }}@endif<br>@endif
+                                @if ($company->bank_account_number)Compte : <span class="mono">{{ $company->bank_account_number }}</span><br>@endif
+                                @if ($company->bank_swift)SWIFT : <span class="mono">{{ $company->bank_swift }}</span><br>@endif
+                                @if ($company->mobile_money)Mobile Money : {{ $company->mobile_money }}<br>@endif
+                                @if ($documentNumber && ! $isQuote)<span class="muted">Merci de rappeler la référence {{ $documentNumber }} lors du paiement.</span>@endif
+                            </div>
+                        </td>
+                    @endif
+                    @if ($company->invoice_footer)
+                        <td style="padding-left: {{ $company->bank_name || $company->mobile_money ? '8px' : '0' }}">
+                            <div class="section"><div class="label">Conditions</div>{{ $company->invoice_footer }}</div>
+                        </td>
+                    @endif
+                </tr>
+            </table>
         @endif
-        @if($company->invoice_footer)<div class="notes"><div class="label">Informations de l’entreprise</div>{{ $company->invoice_footer }}</div>@endif
-        @if($company->signature_path || $company->stamp_path)
-            <div class="approval-assets">
-                @if($company->signature_path)<img src="{{ $forPdf ? Storage::disk('public')->path($company->signature_path) : route('administration.company.asset', 'signature') }}" alt="Signature">@endif
-                @if($company->stamp_path)<img src="{{ $forPdf ? Storage::disk('public')->path($company->stamp_path) : route('administration.company.asset', 'stamp') }}" alt="Cachet">@endif
-            </div>
+
+        @if ($isQuote)
+            <!-- Accord du client -->
+            <table class="signatures">
+                <tr>
+                    <td style="padding-right: 8px">
+                        <div class="sign-box">
+                            <div class="label">Bon pour accord — le client</div>
+                            <div class="muted">Date, nom, signature et cachet précédés de la mention « Bon pour accord »</div>
+                        </div>
+                    </td>
+                    <td style="padding-left: 8px">@include('documents._company-signature')</td>
+                </tr>
+            </table>
         @endif
-        @if($company->representative_name)<div class="right"><strong>{{ $company->representative_name }}</strong>@if($company->representative_title)<br><span class="muted">{{ $company->representative_title }}</span>@endif</div>@endif
-        <div class="footer">Document généré par {{ $company->name }} le {{ now()->format('d/m/Y à H:i') }}</div>
+
+        <!-- Éléments de contrôle et signature de l’émetteur -->
+        <table class="signatures control">
+            <tr>
+                <td style="padding-right: 8px">
+                    <table>
+                        <tr>
+                            @if ($qrCode)
+                                <td style="width: 84px"><img class="qr" src="{{ $qrCode }}" alt="QR code de vérification"></td>
+                            @endif
+                            <td>
+                                @if ($fingerprint)
+                                    <div class="label">Code de contrôle</div>
+                                    <div class="code mono">{{ $fingerprint }}</div>
+                                    <div class="muted">Scannez le QR code pour vérifier l’authenticité du document, son code et son montant.</div>
+                                @else
+                                    <div class="label">Document provisoire</div>
+                                    <div class="muted">Ce brouillon n’a pas de numéro définitif : il n’a aucune valeur comptable ni fiscale.</div>
+                                @endif
+                                <div class="muted" style="margin-top: 4px; font-size: 7.5px">
+                                    {{ $document->lines->count() }} ligne(s)
+                                    @if ($document->creator) · Établi par {{ $document->creator->name }}@endif
+                                    @if ($document instanceof \App\Models\Invoice && $document->validated_at) · Validée le {{ $document->validated_at->format('d/m/Y à H:i') }}@endif
+                                    · Édité le {{ now()->format('d/m/Y à H:i') }}
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="padding-left: 8px">
+                    @unless ($isQuote)
+                        @include('documents._company-signature')
+                    @endunless
+                </td>
+            </tr>
+        </table>
+
+        <!-- Pied de page légal -->
+        <div class="footer">
+            <span class="strong">{{ $company->name }}</span>@if ($company->legal_form) — {{ $company->legal_form }}@endif
+            @foreach ($legalIds as $label => $value) · {{ $label }} {{ $value }}@endforeach
+                    </div>
     </main>
 </body>
 </html>

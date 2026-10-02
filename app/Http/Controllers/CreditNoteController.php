@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CreditNote;
 use App\Models\CompanySetting;
+use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\CreditNotes\Enums\CreditNoteStatus;
+use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\InvoiceStatus;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -142,22 +142,20 @@ class CreditNoteController extends Controller
     {
         $this->requireViewPermission();
 
-        return Pdf::loadView('documents.commercial', $this->documentData($creditNote, true))
-            ->setPaper('a4')
-            ->download($creditNote->number.'.pdf');
+        return app(CommercialDocumentPresenter::class)
+            ->download($this->documentData($creditNote, true), $creditNote->number.'.pdf');
     }
 
     private function documentData(CreditNote $creditNote, bool $forPdf): array
     {
-        $creditNote->load(['party', 'lines']);
+        $creditNote->load(['party', 'lines', 'invoice', 'creator']);
 
         return [
+            ...app(CommercialDocumentPresenter::class)->present($creditNote),
             'document' => $creditNote,
             'documentType' => 'Avoir',
             'documentNumber' => $creditNote->number,
-            'secondaryDateLabel' => 'Facture',
-            'secondaryDate' => $creditNote->invoice->issue_date,
-            'secondaryDateValue' => $creditNote->invoice->number,
+            'reference' => ['Facture d’origine', $creditNote->invoice->number.' du '.$creditNote->invoice->issue_date->format('d/m/Y')],
             'notesLabel' => 'Motif de l’avoir',
             'notesText' => $creditNote->reason,
             'backUrl' => route('credit-notes.show', $creditNote),

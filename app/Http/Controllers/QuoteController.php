@@ -8,10 +8,10 @@ use App\Models\CompanySetting;
 use App\Models\Party;
 use App\Models\Quote;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Parties\Enums\PartyType;
 use App\Modules\Quotes\Enums\QuoteStatus;
 use App\Modules\Quotes\Services\QuoteCalculator;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -92,9 +92,8 @@ class QuoteController extends Controller
     {
         $this->requirePermission(Permission::QuotesView);
 
-        return Pdf::loadView('documents.commercial', $this->documentData($quote, true))
-            ->setPaper('a4')
-            ->download($quote->number.'.pdf');
+        return app(CommercialDocumentPresenter::class)
+            ->download($this->documentData($quote, true), $quote->number.'.pdf');
     }
 
     public function edit(Quote $quote): View
@@ -148,9 +147,10 @@ class QuoteController extends Controller
 
     private function documentData(Quote $quote, bool $forPdf): array
     {
-        $quote->load(['party', 'lines']);
+        $quote->load(['party', 'lines', 'creator']);
 
         return [
+            ...app(CommercialDocumentPresenter::class)->present($quote),
             'document' => $quote,
             'documentType' => 'Devis',
             'documentNumber' => $quote->number,

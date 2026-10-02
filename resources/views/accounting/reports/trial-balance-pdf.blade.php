@@ -17,7 +17,7 @@
     </style>
 </head>
 <body>
-    <h1>{{ config('app.name', 'Konta360') }} — Balance générale</h1>
+    <h1>{{ \App\Models\CompanySetting::current()->name }} — Balance générale</h1>
     <div class="meta">Période du {{ \Illuminate\Support\Carbon::parse($dateFrom)->format('d/m/Y') }} au {{ \Illuminate\Support\Carbon::parse($dateTo)->format('d/m/Y') }} · Devise : {{ $currency }}</div>
     <table>
         <thead><tr><th>Compte</th><th>Intitulé</th><th class="number">Mouv. débit</th><th class="number">Mouv. crédit</th><th class="number">Solde débiteur</th><th class="number">Solde créditeur</th></tr></thead>

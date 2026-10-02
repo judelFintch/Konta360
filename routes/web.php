@@ -3,12 +3,13 @@
 use App\Http\Controllers\AccountingEntryController;
 use App\Http\Controllers\AccountingPeriodController;
 use App\Http\Controllers\AccountingReportController;
-use App\Http\Controllers\BankReconciliationController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\BankReconciliationController;
 use App\Http\Controllers\CatalogItemController;
-use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\CompanySettingController;
+use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentVerificationController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\InvoiceController;
@@ -22,6 +23,15 @@ use App\Modules\Administration\Enums\Permission;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route(auth()->check() ? 'dashboard' : 'login'));
+
+Route::get('verification/{type}/{id}', DocumentVerificationController::class)
+    ->whereIn('type', ['quote', 'invoice', 'credit_note'])
+    ->whereNumber('id')
+    ->middleware(['signed', 'throttle:30,1'])
+    ->name('documents.verify');
+Route::get('verification/logo', [CompanySettingController::class, 'asset'])
+    ->defaults('type', 'logo')
+    ->name('documents.verify.logo');
 
 Route::get('dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])

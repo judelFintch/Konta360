@@ -25,15 +25,23 @@ new class extends Component
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" wire:navigate>
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        @php $company = \App\Models\CompanySetting::current(); @endphp
+                        @if ($company->logo_path)
+                            <img src="{{ route('administration.company.asset', 'logo') }}" alt="{{ $company->name }}" class="block h-9 w-auto max-w-[140px] object-contain">
+                        @else
+                            <span class="flex items-center gap-2">
+                                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($company->name, 0, 1)) }}</span>
+                                <span class="block max-w-[180px] truncate text-sm font-semibold text-gray-900 sm:hidden lg:block">{{ $company->name }}</span>
+                            </span>
+                        @endif
                     </a>
                 </div>
 
                 <!-- Navigation Links -->
                 <div class="hidden items-center gap-2 sm:ms-8 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
+                    <a href="{{ route('dashboard') }}" wire:navigate class="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('dashboard') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                         Accueil
-                    </x-nav-link>
+                    </a>
 
                     @canany([Permission::QuotesView->value, Permission::InvoicesView->value, Permission::PaymentsRecord->value])
                         <x-dropdown align="left" width="48">
@@ -90,11 +98,36 @@ new class extends Component
             </div>
 
             <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <div class="hidden sm:flex sm:items-center sm:gap-3 sm:ms-6">
+                @php
+                    $quickActions = array_filter([
+                        auth()->user()->can(Permission::QuotesCreate->value) ? ['Devis', route('quotes.create')] : null,
+                        auth()->user()->can(Permission::PartiesManage->value) ? ['Client ou fournisseur', route('parties.create')] : null,
+                        auth()->user()->can(Permission::CatalogManage->value) ? ['Produit ou service', route('catalog.create')] : null,
+                        auth()->user()->can(Permission::AccountingEntriesCreate->value) ? ['Dépense fournisseur', route('expenses.create')] : null,
+                        auth()->user()->can(Permission::AccountingEntriesCreate->value) ? ['Écriture comptable', route('accounting.entries.create')] : null,
+                    ]);
+                @endphp
+                @if ($quickActions)
+                    <x-dropdown align="right" width="48">
+                        <x-slot name="trigger">
+                            <button class="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+                                Nouveau
+                            </button>
+                        </x-slot>
+                        <x-slot name="content">
+                            @foreach ($quickActions as [$label, $url])
+                                <x-dropdown-link :href="$url" wire:navigate>{{ $label }}</x-dropdown-link>
+                            @endforeach
+                        </x-slot>
+                    </x-dropdown>
+                @endif
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                            <div x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name" x-on:profile-updated.window="name = $event.detail.name"></div>
+                            <div x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name" x-on:profile-updated.window="name = $event.detail.name">{{ auth()->user()->name }}</div>
 
                             <div class="ms-1">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -116,13 +149,13 @@ new class extends Component
                             </x-dropdown-link>
                         @endcan
                         <x-dropdown-link :href="route('profile')" wire:navigate>
-                            {{ __('Profile') }}
+                            Mon profil
                         </x-dropdown-link>
 
                         <!-- Authentication -->
                         <button wire:click="logout" class="w-full text-start">
                             <x-dropdown-link>
-                                {{ __('Log Out') }}
+                                Se déconnecter
                             </x-dropdown-link>
                         </button>
                     </x-slot>
@@ -147,6 +180,11 @@ new class extends Component
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                 Tableau de bord
             </x-responsive-nav-link>
+            @can(Permission::QuotesCreate->value)
+                <x-responsive-nav-link :href="route('quotes.create')" wire:navigate>
+                    <span class="font-semibold text-indigo-600">+ Nouveau devis</span>
+                </x-responsive-nav-link>
+            @endcan
             @can(Permission::PartiesManage->value)
                 <x-responsive-nav-link :href="route('parties.index')" :active="request()->routeIs('parties.*')" wire:navigate>
                     Tiers
@@ -210,7 +248,7 @@ new class extends Component
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4">
-                <div class="font-medium text-base text-gray-800" x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name" x-on:profile-updated.window="name = $event.detail.name"></div>
+                <div class="font-medium text-base text-gray-800" x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name" x-on:profile-updated.window="name = $event.detail.name">{{ auth()->user()->name }}</div>
                 <div class="font-medium text-sm text-gray-500">{{ auth()->user()->email }}</div>
             </div>
 
@@ -226,13 +264,13 @@ new class extends Component
                     </x-responsive-nav-link>
                 @endcan
                 <x-responsive-nav-link :href="route('profile')" wire:navigate>
-                    {{ __('Profile') }}
+                    Mon profil
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->
                 <button wire:click="logout" class="w-full text-start">
                     <x-responsive-nav-link>
-                        {{ __('Log Out') }}
+                        Se déconnecter
                     </x-responsive-nav-link>
                 </button>
             </div>
