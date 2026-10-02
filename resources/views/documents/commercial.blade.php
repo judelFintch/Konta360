@@ -1,3 +1,4 @@
+@php $company = \App\Models\CompanySetting::current(); @endphp
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -14,6 +15,9 @@
         .header { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
         .header td { width: 50%; vertical-align: top; }
         .brand { color: #4f46e5; font-size: 23px; font-weight: bold; }
+        .logo { max-width: 150px; max-height: 70px; margin-bottom: 8px; }
+        .approval-assets { display: flex; align-items: end; justify-content: flex-end; gap: 18px; margin-top: 28px; }
+        .approval-assets img { max-width: 115px; max-height: 75px; object-fit: contain; }
         .document-title { margin: 0; color: #111827; font-size: 25px; text-transform: uppercase; }
         .muted { color: #6b7280; }
         .right { text-align: right; }
@@ -57,7 +61,9 @@
         <table class="header">
             <tr>
                 <td>
-                    <div class="brand">{{ config('app.name', 'Konta360') }}</div>
+                    @if($company->logo_path)<img class="logo" src="{{ $forPdf ? Storage::disk('public')->path($company->logo_path) : route('administration.company.asset', 'logo') }}" alt="Logo">@endif
+                    <div class="brand">{{ $company->name }}</div>
+                    @if($company->legal_form)<div class="muted">{{ $company->legal_form }}</div>@endif
                     <div class="muted">Gestion commerciale et comptable</div>
                 </td>
                 <td class="right">
@@ -72,7 +78,14 @@
             <tr>
                 <td>
                     <div class="label">Émetteur</div>
-                    <div class="party-name">{{ config('app.name', 'Konta360') }}</div>
+                    <div class="party-name">{{ $company->name }}</div>
+                    @if($company->tax_identifier)<div>N° fiscal : {{ $company->tax_identifier }}</div>@endif
+                    @if($company->national_identifier)<div>ID Nat : {{ $company->national_identifier }}</div>@endif
+                    @if($company->cnss_number)<div>CNSS : {{ $company->cnss_number }}</div>@endif
+                    @if($company->trade_register)<div>RCCM : {{ $company->trade_register }}</div>@endif
+                    @if($company->address)<div>{!! nl2br(e($company->address)) !!}</div>@endif
+                    @if($company->email)<div>{{ $company->email }}</div>@endif
+                    @if($company->phone)<div>{{ $company->phone }}</div>@endif
                 </td>
                 <td>
                     <div class="label">Client</div>
@@ -130,7 +143,24 @@
             <div class="notes"><div class="label">{{ $notesLabel ?? 'Notes et conditions' }}</div>{{ $notesText ?? $document->notes }}</div>
         @endif
 
-        <div class="footer">Document généré par {{ config('app.name', 'Konta360') }} le {{ now()->format('d/m/Y à H:i') }}</div>
+        @if($company->bank_name || $company->mobile_money)
+            <div class="notes"><div class="label">Coordonnées de paiement</div>
+                @if($company->bank_name)<strong>{{ $company->bank_name }}</strong>@endif
+                @if($company->bank_account_name) — {{ $company->bank_account_name }}@endif
+                @if($company->bank_account_number)<br>Compte : {{ $company->bank_account_number }}@endif
+                @if($company->bank_swift) · SWIFT : {{ $company->bank_swift }}@endif
+                @if($company->mobile_money)<br>Mobile Money : {{ $company->mobile_money }}@endif
+            </div>
+        @endif
+        @if($company->invoice_footer)<div class="notes"><div class="label">Informations de l’entreprise</div>{{ $company->invoice_footer }}</div>@endif
+        @if($company->signature_path || $company->stamp_path)
+            <div class="approval-assets">
+                @if($company->signature_path)<img src="{{ $forPdf ? Storage::disk('public')->path($company->signature_path) : route('administration.company.asset', 'signature') }}" alt="Signature">@endif
+                @if($company->stamp_path)<img src="{{ $forPdf ? Storage::disk('public')->path($company->stamp_path) : route('administration.company.asset', 'stamp') }}" alt="Cachet">@endif
+            </div>
+        @endif
+        @if($company->representative_name)<div class="right"><strong>{{ $company->representative_name }}</strong>@if($company->representative_title)<br><span class="muted">{{ $company->representative_title }}</span>@endif</div>@endif
+        <div class="footer">Document généré par {{ $company->name }} le {{ now()->format('d/m/Y à H:i') }}</div>
     </main>
 </body>
 </html>

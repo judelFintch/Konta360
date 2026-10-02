@@ -1,0 +1,9 @@
+<x-app-layout>
+    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Journal d’audit</p><h1 class="text-2xl font-semibold text-gray-900">Opération #{{ $auditLog->id }}</h1></div></x-slot>
+    <div class="py-10"><div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8"><article class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
+        <dl class="grid gap-6 sm:grid-cols-2"><div><dt class="text-xs uppercase text-gray-500">Date et heure</dt><dd class="mt-1 font-semibold">{{ $auditLog->created_at->format('d/m/Y H:i:s') }}</dd></div><div><dt class="text-xs uppercase text-gray-500">Utilisateur</dt><dd class="mt-1 font-semibold">{{ $auditLog->user?->name ?? 'Utilisateur supprimé' }}</dd></div><div><dt class="text-xs uppercase text-gray-500">Action</dt><dd class="mt-1 font-semibold">{{ ucfirst($auditLog->action) }}</dd></div><div><dt class="text-xs uppercase text-gray-500">Méthode et route</dt><dd class="mt-1 font-semibold">{{ $auditLog->http_method }} · {{ $auditLog->route_name ?? '—' }}</dd></div><div><dt class="text-xs uppercase text-gray-500">Objet</dt><dd class="mt-1 font-semibold">{{ $auditLog->subject_type ? class_basename($auditLog->subject_type).' #'.$auditLog->subject_id : '—' }}</dd></div><div><dt class="text-xs uppercase text-gray-500">Adresse IP</dt><dd class="mt-1 font-semibold">{{ $auditLog->ip_address ?? '—' }}</dd></div></dl>
+        <div class="mt-8 rounded-lg bg-gray-50 p-5"><p class="text-xs uppercase text-gray-500">Description</p><p class="mt-2 font-semibold">{{ $auditLog->description }}</p></div>
+        <div class="mt-6"><p class="text-xs uppercase text-gray-500">Navigateur</p><p class="mt-2 break-all text-sm text-gray-600">{{ $auditLog->user_agent ?: '—' }}</p></div>
+        <div class="mt-8"><a href="{{ route('audit-logs.index') }}" class="text-sm font-semibold text-indigo-600">← Retour au journal</a></div>
+    </article></div></div>
+</x-app-layout>

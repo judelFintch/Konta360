@@ -18,7 +18,7 @@
 <div x-data='{
     lines: @json($initialLines),
     items: @json($itemsForJs),
-    currency: @json(old('currency', $quote->currency ?? 'CDF')),
+    currency: @json(old('currency', $quote->currency ?? \App\Models\CompanySetting::current()->default_currency)),
     addLine() { this.lines.push({ catalog_item_id: "", quantity: 1, discount_rate: 0 }) },
     lineValues(line) {
         const item = this.items[line.catalog_item_id];
@@ -53,7 +53,7 @@
         <div>
             <x-input-label for="valid_until" value="Valable jusqu’au *" />
             <x-text-input id="valid_until" name="valid_until" type="date" class="mt-1 block w-full"
-                          :value="old('valid_until', isset($quote) ? $quote->valid_until->format('Y-m-d') : now()->addDays(30)->format('Y-m-d'))" required />
+                          :value="old('valid_until', isset($quote) ? $quote->valid_until->format('Y-m-d') : now()->addDays(\App\Models\CompanySetting::current()->default_quote_validity_days)->format('Y-m-d'))" required />
             <x-input-error :messages="$errors->get('valid_until')" class="mt-2" />
         </div>
 

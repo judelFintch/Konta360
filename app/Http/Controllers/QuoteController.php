@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\QuoteRequest;
 use App\Models\CatalogItem;
+use App\Models\CompanySetting;
 use App\Models\Party;
 use App\Models\Quote;
 use App\Modules\Administration\Enums\Permission;
@@ -63,7 +64,7 @@ class QuoteController extends Controller
                 'status' => QuoteStatus::Draft,
                 'created_by' => auth()->id(),
             ]);
-            $quote->update(['number' => sprintf('DEV-%s-%05d', $quote->issue_date->format('Y'), $quote->id)]);
+            $quote->update(['number' => CompanySetting::current()->documentNumber('quote', $quote->id, $quote->issue_date)]);
             $quote->lines()->createMany($totals['lines']);
 
             return $quote;

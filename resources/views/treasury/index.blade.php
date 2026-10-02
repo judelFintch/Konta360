@@ -5,6 +5,7 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div><p class="text-sm font-medium text-indigo-600">Finance</p><h1 class="text-2xl font-semibold text-gray-900">Trésorerie</h1><p class="mt-1 text-sm text-gray-500">Suivez les soldes de vos banques et caisses, ainsi que le journal des entrées, sorties et virements.</p></div>
             <div class="flex flex-wrap gap-3">
+                @can(\App\Modules\Administration\Enums\Permission::ReportsExport->value)<a href="{{ route('exports.treasury') }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700">Exporter CSV</a>@endcan
                 <a href="{{ route('treasury.reconciliations.index') }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700">Rapprochements bancaires</a>
                 @if ($accounts->isNotEmpty())<a href="{{ route('treasury.transactions.create') }}" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">Nouveau mouvement</a>@endif
             </div>
@@ -31,7 +32,7 @@
                 @csrf
                 <div><x-input-label for="name" value="Nom *" /><x-text-input id="name" name="name" class="mt-1 block w-full" :value="old('name')" placeholder="Banque principale" required /><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
                 <div><x-input-label for="type" value="Type *" /><select id="type" name="type" class="mt-1 block w-full rounded-md border-gray-300">@foreach(TreasuryAccountType::cases() as $item)<option value="{{ $item->value }}" @selected(old('type') === $item->value)>{{ $item->label() }}</option>@endforeach</select></div>
-                <div><x-input-label for="currency" value="Devise *" /><select id="currency" name="currency" class="mt-1 block w-full rounded-md border-gray-300"><option value="CDF" @selected(old('currency') === 'CDF')>CDF</option><option value="USD" @selected(old('currency', 'USD') === 'USD')>USD</option></select></div>
+                <div><x-input-label for="currency" value="Devise *" /><select id="currency" name="currency" class="mt-1 block w-full rounded-md border-gray-300"><option value="CDF" @selected(old('currency', \App\Models\CompanySetting::current()->default_currency) === 'CDF')>CDF</option><option value="USD" @selected(old('currency', \App\Models\CompanySetting::current()->default_currency) === 'USD')>USD</option></select></div>
                 <div><x-input-label for="opening_balance" value="Solde initial *" /><x-text-input id="opening_balance" name="opening_balance" type="number" min="0" step="0.01" class="mt-1 block w-full" :value="old('opening_balance', 0)" required /><x-input-error :messages="$errors->get('opening_balance')" class="mt-2" /></div>
                 <div class="sm:col-span-2 lg:col-span-4 flex justify-end"><x-primary-button>Créer le compte</x-primary-button></div>
             </form>

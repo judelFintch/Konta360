@@ -20,7 +20,7 @@ it('seeds roles and permissions successfully via the real DatabaseSeeder entrypo
     expect(Role::count())->toBe(count(RoleEnum::values()))
         ->and(Permission::count())->toBe(count(PermissionEnum::values()));
 
-    $testUser = User::where('email', 'test@example.com')->firstOrFail();
-    expect($testUser->hasRole(RoleEnum::Administrateur->value))->toBeTrue()
-        ->and($testUser->hasPermissionTo(PermissionEnum::UsersManage->value))->toBeTrue();
+    $admin = User::where('email', config('konta360.admin.email'))->firstOrFail();
+    expect($admin->hasRole(RoleEnum::Administrateur->value))->toBeTrue()
+        ->and($admin->hasPermissionTo(PermissionEnum::UsersManage->value))->toBeTrue();
 });

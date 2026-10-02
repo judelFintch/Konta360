@@ -1,0 +1,11 @@
+<div class="grid gap-6 sm:grid-cols-2">
+    <div><x-input-label for="name" value="Nom complet *" /><x-text-input id="name" name="name" class="mt-1 block w-full" :value="old('name',$managedUser?->name)" required /><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
+    <div><x-input-label for="email" value="Adresse e-mail *" /><x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email',$managedUser?->email)" required /><x-input-error :messages="$errors->get('email')" class="mt-2" /></div>
+    <div><x-input-label for="role" value="Rôle *" /><select id="role" name="role" class="mt-1 block w-full rounded-md border-gray-300" required>@foreach($roles as $role)<option value="{{ $role->value }}" @selected(old('role',$managedUser?->roles->first()?->name)===$role->value)>{{ $role->label() }}</option>@endforeach</select><x-input-error :messages="$errors->get('role')" class="mt-2" /></div>
+    @if($managedUser)
+        <div><x-input-label for="is_active" value="Statut *" /><select id="is_active" name="is_active" class="mt-1 block w-full rounded-md border-gray-300"><option value="1" @selected((string)old('is_active',(int)$managedUser->is_active)==='1')>Actif</option><option value="0" @selected((string)old('is_active',(int)$managedUser->is_active)==='0')>Désactivé</option></select><x-input-error :messages="$errors->get('is_active')" class="mt-2" /></div>
+    @endif
+    <div><x-input-label for="password" :value="$managedUser ? 'Nouveau mot de passe' : 'Mot de passe *'" /><x-text-input id="password" name="password" type="password" class="mt-1 block w-full" :required="!$managedUser" /><x-input-error :messages="$errors->get('password')" class="mt-2" />@if($managedUser)<p class="mt-1 text-xs text-gray-500">Laissez vide pour conserver le mot de passe actuel.</p>@endif</div>
+    <div><x-input-label for="password_confirmation" value="Confirmer le mot de passe" /><x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" :required="!$managedUser" /></div>
+</div>
+<div class="mt-8 flex justify-end gap-3"><a href="{{ route('administration.users.index') }}" class="rounded-md px-4 py-2 text-sm font-semibold text-gray-600">Annuler</a><x-primary-button>{{ $submitLabel }}</x-primary-button></div>

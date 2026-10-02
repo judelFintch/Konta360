@@ -52,10 +52,10 @@ new class extends Component
                         </x-dropdown>
                     @endcanany
 
-                    @canany([Permission::AccountingView->value, Permission::FinancialStatementsView->value, Permission::TreasuryManage->value])
+                    @canany([Permission::AccountingView->value, Permission::FinancialStatementsView->value, Permission::TreasuryManage->value, Permission::AuditView->value])
                         <x-dropdown align="left" width="48">
                             <x-slot name="trigger">
-                                <button class="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('accounting.*', 'financial-statements.*', 'treasury.*', 'expenses.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                                <button class="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs('accounting.*', 'financial-statements.*', 'treasury.*', 'expenses.*', 'audit-logs.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                                     Comptabilité
                                     <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                                 </button>
@@ -66,6 +66,7 @@ new class extends Component
                                 @can(Permission::AccountingView->value)<x-dropdown-link :href="route('expenses.index')" wire:navigate>Dépenses fournisseurs</x-dropdown-link>@endcan
                                 @can(Permission::FinancialStatementsView->value)<x-dropdown-link :href="route('financial-statements.income-statement')" wire:navigate>États financiers</x-dropdown-link>@endcan
                                 @can(Permission::AccountingPeriodsClose->value)<x-dropdown-link :href="route('accounting.periods.index')" wire:navigate>Périodes et clôture</x-dropdown-link>@endcan
+                                @can(Permission::AuditView->value)<x-dropdown-link :href="route('audit-logs.index')" wire:navigate>Journal d’audit</x-dropdown-link>@endcan
                             </x-slot>
                         </x-dropdown>
                     @endcanany
@@ -104,6 +105,16 @@ new class extends Component
                     </x-slot>
 
                     <x-slot name="content">
+                        @can(Permission::UsersManage->value)
+                            <x-dropdown-link :href="route('administration.users.index')" wire:navigate>
+                                Utilisateurs et rôles
+                            </x-dropdown-link>
+                        @endcan
+                        @can(Permission::SettingsManage->value)
+                            <x-dropdown-link :href="route('administration.company.edit')" wire:navigate>
+                                Paramètres de l’entreprise
+                            </x-dropdown-link>
+                        @endcan
                         <x-dropdown-link :href="route('profile')" wire:navigate>
                             {{ __('Profile') }}
                         </x-dropdown-link>
@@ -184,6 +195,11 @@ new class extends Component
                     États financiers
                 </x-responsive-nav-link>
             @endcan
+            @can(Permission::AuditView->value)
+                <x-responsive-nav-link :href="route('audit-logs.index')" :active="request()->routeIs('audit-logs.*')" wire:navigate>
+                    Journal d’audit
+                </x-responsive-nav-link>
+            @endcan
             @can(Permission::FixedAssetsManage->value)
                 <x-responsive-nav-link :href="route('fixed-assets.index')" :active="request()->routeIs('fixed-assets.*')" wire:navigate>
                     Immobilisations
@@ -199,6 +215,16 @@ new class extends Component
             </div>
 
             <div class="mt-3 space-y-1">
+                @can(Permission::UsersManage->value)
+                    <x-responsive-nav-link :href="route('administration.users.index')" :active="request()->routeIs('administration.users.*')" wire:navigate>
+                        Utilisateurs et rôles
+                    </x-responsive-nav-link>
+                @endcan
+                @can(Permission::SettingsManage->value)
+                    <x-responsive-nav-link :href="route('administration.company.edit')" :active="request()->routeIs('administration.company.*')" wire:navigate>
+                        Paramètres de l’entreprise
+                    </x-responsive-nav-link>
+                @endcan
                 <x-responsive-nav-link :href="route('profile')" wire:navigate>
                     {{ __('Profile') }}
                 </x-responsive-nav-link>

@@ -2,10 +2,13 @@
 
 <x-app-layout>
     <x-slot name="header">
-        <div>
-            <p class="text-sm font-medium text-indigo-600">Ventes</p>
-            <h1 class="text-2xl font-semibold text-gray-900">Factures</h1>
-            <p class="mt-1 text-sm text-gray-500">Suivez les factures issues des devis, leur échéance de paiement et le solde restant dû.</p>
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm font-medium text-indigo-600">Ventes</p>
+                <h1 class="text-2xl font-semibold text-gray-900">Factures</h1>
+                <p class="mt-1 text-sm text-gray-500">Suivez les factures issues des devis, leur échéance de paiement et le solde restant dû.</p>
+            </div>
+            @can(Permission::ReportsExport->value)<a href="{{ route('exports.invoices') }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700">Exporter CSV</a>@endcan
         </div>
     </x-slot>
 

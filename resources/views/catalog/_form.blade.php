@@ -40,13 +40,13 @@
             <x-input-label for="currency" value="Devise *" />
             <select id="currency" name="currency" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 @foreach (['CDF', 'USD'] as $currency)
-                    <option value="{{ $currency }}" @selected(old('currency', $catalogItem?->currency ?? 'CDF') === $currency)>{{ $currency }}</option>
+                    <option value="{{ $currency }}" @selected(old('currency', $catalogItem?->currency ?? \App\Models\CompanySetting::current()->default_currency) === $currency)>{{ $currency }}</option>
                 @endforeach
             </select>
         </div>
         <div>
             <x-input-label for="tax_rate" value="Taxe (%) *" />
-            <x-text-input id="tax_rate" name="tax_rate" type="number" min="0" max="100" step="0.01" class="mt-1 block w-full" :value="old('tax_rate', $catalogItem?->tax_rate ?? '0')" required />
+            <x-text-input id="tax_rate" name="tax_rate" type="number" min="0" max="100" step="0.01" class="mt-1 block w-full" :value="old('tax_rate', $catalogItem?->tax_rate ?? \App\Models\CompanySetting::current()->default_tax_rate)" required />
             <x-input-error :messages="$errors->get('tax_rate')" class="mt-2" />
         </div>
     </div>

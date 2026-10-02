@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CreditNote;
+use App\Models\CompanySetting;
 use App\Models\Invoice;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
@@ -112,7 +113,7 @@ class CreditNoteController extends Controller
                 'total' => round((float) collect($lines)->sum('total'), 2),
                 'created_by' => auth()->id(),
             ]);
-            $creditNote->update(['number' => sprintf('AVO-%s-%05d', $creditNote->issue_date->format('Y'), $creditNote->id)]);
+            $creditNote->update(['number' => CompanySetting::current()->documentNumber('credit_note', $creditNote->id, $creditNote->issue_date)]);
             $creditNote->lines()->createMany($lines);
             $accounting->postCreditNote($creditNote, auth()->id());
 

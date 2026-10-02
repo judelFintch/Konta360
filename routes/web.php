@@ -4,8 +4,10 @@ use App\Http\Controllers\AccountingEntryController;
 use App\Http\Controllers\AccountingPeriodController;
 use App\Http\Controllers\AccountingReportController;
 use App\Http\Controllers\BankReconciliationController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\CreditNoteController;
+use App\Http\Controllers\CompanySettingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FixedAssetController;
@@ -13,11 +15,13 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\QuoteController;
+use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\TreasuryController;
+use App\Http\Controllers\UserManagementController;
 use App\Modules\Administration\Enums\Permission;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome');
+Route::get('/', fn () => redirect()->route(auth()->check() ? 'dashboard' : 'login'));
 
 Route::get('dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])
@@ -43,6 +47,21 @@ Route::resource('fixed-assets', FixedAssetController::class)
 Route::post('fixed-assets/{fixedAsset}/depreciations', [FixedAssetController::class, 'postDepreciations'])
     ->middleware(['auth', 'verified', 'permission:'.Permission::FixedAssetsManage->value])
     ->name('fixed-assets.depreciations.store');
+
+Route::resource('administration/users', UserManagementController::class)
+    ->parameters(['users' => 'user'])
+    ->only(['index', 'create', 'store', 'edit', 'update'])
+    ->middleware(['auth', 'verified', 'permission:'.Permission::UsersManage->value])
+    ->names('administration.users');
+Route::get('administration/company', [CompanySettingController::class, 'edit'])
+    ->middleware(['auth', 'verified', 'permission:'.Permission::SettingsManage->value])
+    ->name('administration.company.edit');
+Route::put('administration/company', [CompanySettingController::class, 'update'])
+    ->middleware(['auth', 'verified', 'permission:'.Permission::SettingsManage->value])
+    ->name('administration.company.update');
+Route::get('company-assets/{type}', [CompanySettingController::class, 'asset'])
+    ->middleware(['auth', 'verified'])
+    ->name('administration.company.asset');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('quotes', QuoteController::class)
@@ -105,6 +124,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('financial-statements/income-statement/pdf', [AccountingReportController::class, 'incomeStatementPdf'])->name('financial-statements.income-statement.pdf');
     Route::get('financial-statements/balance-sheet', [AccountingReportController::class, 'balanceSheet'])->name('financial-statements.balance-sheet');
     Route::get('financial-statements/balance-sheet/pdf', [AccountingReportController::class, 'balanceSheetPdf'])->name('financial-statements.balance-sheet.pdf');
+    Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('audit-logs.show');
+    Route::get('exports/invoices.csv', [ReportExportController::class, 'invoices'])->name('exports.invoices');
+    Route::get('exports/expenses.csv', [ReportExportController::class, 'expenses'])->name('exports.expenses');
+    Route::get('exports/accounting-entries.csv', [ReportExportController::class, 'accountingEntries'])->name('exports.accounting-entries');
+    Route::get('exports/treasury.csv', [ReportExportController::class, 'treasury'])->name('exports.treasury');
+    Route::get('exports/audit.csv', [ReportExportController::class, 'audit'])->name('exports.audit');
 });
 
 require __DIR__.'/auth.php';

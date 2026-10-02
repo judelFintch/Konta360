@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\InvoiceDraftRequest;
 use App\Models\Invoice;
+use App\Models\CompanySetting;
 use App\Models\Quote;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
@@ -86,7 +87,7 @@ class InvoiceController extends Controller
                 'party_id' => $quote->party_id,
                 'status' => InvoiceStatus::Draft,
                 'issue_date' => today(),
-                'due_date' => today()->addDays(30),
+                'due_date' => today()->addDays(CompanySetting::current()->default_payment_days),
                 'currency' => $quote->currency,
                 'notes' => $quote->notes,
                 'subtotal' => $quote->subtotal,
@@ -142,7 +143,7 @@ class InvoiceController extends Controller
 
         DB::transaction(function () use ($invoice, $accounting) {
             $invoice->update([
-                'number' => sprintf('FAC-%s-%05d', $invoice->issue_date->format('Y'), $invoice->id),
+                'number' => CompanySetting::current()->documentNumber('invoice', $invoice->id, $invoice->issue_date),
                 'status' => InvoiceStatus::Validated,
                 'validated_at' => now(),
                 'validated_by' => auth()->id(),

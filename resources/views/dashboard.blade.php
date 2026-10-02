@@ -136,6 +136,36 @@
                     </a>
                 @endcan
 
+                @can(Permission::AuditView->value)
+                    <a href="{{ route('audit-logs.index') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between">
+                            <div><p class="text-sm font-medium text-indigo-600">Contrôle interne</p><h3 class="mt-1 text-lg font-semibold text-gray-900">Journal d’audit</h3></div>
+                            <span class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-600 group-hover:bg-indigo-100">→</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Consulter les opérations sensibles réalisées par les utilisateurs.</p>
+                    </a>
+                @endcan
+
+                @can(Permission::UsersManage->value)
+                    <a href="{{ route('administration.users.index') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between">
+                            <div><p class="text-sm font-medium text-indigo-600">Administration</p><h3 class="mt-1 text-lg font-semibold text-gray-900">Utilisateurs et rôles</h3></div>
+                            <span class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-600 group-hover:bg-indigo-100">→</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Créer les comptes, attribuer les rôles et contrôler les accès.</p>
+                    </a>
+                @endcan
+
+                @can(Permission::SettingsManage->value)
+                    <a href="{{ route('administration.company.edit') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between">
+                            <div><p class="text-sm font-medium text-indigo-600">Administration</p><h3 class="mt-1 text-lg font-semibold text-gray-900">Paramètres de l’entreprise</h3></div>
+                            <span class="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-600 group-hover:bg-indigo-100">→</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-600">Configurer l’identité et les mentions affichées sur les documents.</p>
+                    </a>
+                @endcan
+
                 @can(Permission::TreasuryManage->value)
                     <a href="{{ route('treasury.index') }}" class="group rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-md">
                         <div class="flex items-start justify-between">
