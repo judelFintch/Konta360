@@ -77,12 +77,23 @@ class Invoice extends Model
 
     public function creditedAmount(): float
     {
-        return round((float) $this->creditNotes()->sum('total'), 2);
+        $creditNotes = $this->relationLoaded('creditNotes') ? $this->creditNotes : $this->creditNotes();
+
+        return round((float) $creditNotes->sum('total'), 2);
     }
 
     public function paidAmount(): float
     {
-        return round((float) $this->recordedPayments()->sum('amount'), 2);
+        $payments = $this->relationLoaded('recordedPayments') ? $this->recordedPayments : $this->recordedPayments();
+
+        return round((float) $payments->sum('amount'), 2);
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->status === InvoiceStatus::Validated
+            && $this->due_date->lt(today())
+            && $this->balanceDue() > 0;
     }
 
     public function balanceDue(): float

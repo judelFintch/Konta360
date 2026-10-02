@@ -9,6 +9,7 @@ use App\Modules\Administration\Enums\Role;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Parties\Enums\PartyType;
+use chillerlan\QRCode\QRCode;
 
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
@@ -75,8 +76,16 @@ it('lets anyone verify a document through its signed link', function () {
 it('rejects tampered verification links', function () {
     $url = $this->presenter->verificationUrl($this->invoice);
 
-    $this->get(str_replace('/invoice/'.$this->invoice->id, '/invoice/'.($this->invoice->id + 1), $url))
+    $this->get(str_replace('/invoice/'.$this->invoice->id.'/', '/invoice/'.($this->invoice->id + 1).'/', $url))
         ->assertForbidden();
+    $this->get(substr($url, 0, -1).'0')->assertForbidden();
+});
+
+it('verifies links whatever the scheme or host they are opened with', function () {
+    $path = parse_url($this->presenter->verificationUrl($this->invoice), PHP_URL_PATH);
+
+    $this->get('https://www.autre-domaine.test'.$path)->assertOk()->assertSee('Document authentique');
+    expect(strlen($path))->toBeLessThan(60);
 });
 
 it('flags cancelled invoices as not valid', function () {
@@ -119,4 +128,36 @@ it('shows the company name in the application header', function () {
     $this->actingAs($this->user)
         ->get(route('dashboard'))
         ->assertSee('<title>Société Démo SARL — Konta360</title>', false);
+});
+
+it('shows the invoice situation and control code on the invoice page', function () {
+    $this->actingAs($this->user)
+        ->get(route('invoices.show', $this->invoice))
+        ->assertOk()
+        ->assertSee('Reste à payer')
+        ->assertSee('1 160,00')
+        ->assertSee($this->presenter->fingerprint($this->invoice))
+        ->assertSee('Facture créée');
+});
+
+it('summarises invoices by currency on the list page', function () {
+    $this->actingAs($this->user)
+        ->get(route('invoices.index'))
+        ->assertOk()
+        ->assertSeeInOrder(['Total facturé', '1 160,00', 'Reste à encaisser', '1 160,00'])
+        ->assertSee('À encaisser');
+});
+
+it('prints a png qr code that decodes to a working verification link', function () {
+    $html = $this->actingAs($this->user)->get(route('invoices.print', $this->invoice))->getContent();
+
+    expect(preg_match('/class="qr" src="data:image\/png;base64,([^"]+)"/', $html, $matches))->toBe(1);
+
+    $file = tempnam(sys_get_temp_dir(), 'qr');
+    file_put_contents($file, base64_decode($matches[1]));
+    $decoded = (string) (new QRCode)->readFromFile($file);
+    unlink($file);
+
+    expect($decoded)->toBe($this->presenter->verificationUrl($this->invoice));
+    $this->get($decoded)->assertOk()->assertSee('Document authentique');
 });

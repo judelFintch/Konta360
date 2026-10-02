@@ -24,10 +24,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route(auth()->check() ? 'dashboard' : 'login'));
 
-Route::get('verification/{type}/{id}', DocumentVerificationController::class)
+Route::get('verification/{type}/{id}/{token}', DocumentVerificationController::class)
     ->whereIn('type', ['quote', 'invoice', 'credit_note'])
     ->whereNumber('id')
-    ->middleware(['signed', 'throttle:30,1'])
+    ->whereAlphaNumeric('token')
+    ->middleware('throttle:30,1')
     ->name('documents.verify');
 Route::get('verification/logo', [CompanySettingController::class, 'asset'])
     ->defaults('type', 'logo')

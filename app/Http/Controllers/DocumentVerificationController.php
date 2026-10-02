@@ -9,12 +9,13 @@ use Illuminate\View\View;
 
 /**
  * Public page reached by scanning the QR code printed on a document.
- * The URL is signed, so only codes issued by the application resolve.
+ * Only links carrying the token issued by the application resolve.
  */
 class DocumentVerificationController extends Controller
 {
-    public function __invoke(string $type, int $id, CommercialDocumentPresenter $presenter): View
+    public function __invoke(string $type, int $id, string $token, CommercialDocumentPresenter $presenter): View
     {
+        abort_unless(hash_equals($presenter->verificationToken($type, $id), $token), 403, 'Lien de vérification invalide.');
         $model = CommercialDocumentPresenter::TYPES[$type] ?? abort(404);
         $document = $model::query()->with(['party', 'lines'])->findOrFail($id);
         abort_unless($presenter->isVerifiable($document), 404);

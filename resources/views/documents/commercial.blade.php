@@ -44,29 +44,29 @@
         .alert a { color: #78350f; font-weight: 600; }
 
         .page { position: relative; max-width: 210mm; min-height: 297mm; margin: 16px auto 32px; padding: 14mm 14mm 30mm; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.12); overflow: hidden; }
-        .accent { height: 4px; margin: -14mm -14mm 8mm; background: #1e3a8a; }
+        .accent { height: 4px; margin: -14mm -14mm 8mm; background: #4338ca; }
 
         /* En-tête */
         .logo { max-width: 170px; max-height: 64px; margin-bottom: 6px; }
         .company-name { color: #111827; font-size: 17px; font-weight: bold; line-height: 1.2; }
         .company-meta { margin-top: 4px; color: #4b5563; font-size: 9px; }
-        .doc-title { margin: 0; color: #1e3a8a; font-size: 26px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+        .doc-title { margin: 0; color: #4338ca; font-size: 26px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
         .meta { width: auto; margin: 6px 0 0 auto; }
         .meta td { padding: 1px 0 1px 14px; }
         .meta td:first-child { color: #6b7280; }
-        .status { display: inline-block; padding: 2px 8px; border-radius: 10px; color: #1e3a8a; background: #dbeafe; font-size: 8px; font-weight: bold; text-transform: uppercase; }
+        .status { display: inline-block; padding: 2px 8px; border-radius: 10px; color: #4338ca; background: #e0e7ff; font-size: 8px; font-weight: bold; text-transform: uppercase; }
 
         /* Blocs émetteur / client */
         .boxes { margin-top: 14px; }
         .boxes > tbody > tr > td { width: 50%; }
         .box { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 4px; }
-        .box.client { border-color: #1e3a8a; }
+        .box.client { border-color: #4338ca; }
         .label { margin-bottom: 5px; color: #6b7280; font-size: 7.5px; font-weight: bold; letter-spacing: .8px; text-transform: uppercase; }
         .party-name { color: #111827; font-size: 12px; font-weight: bold; }
 
         /* Lignes */
         .lines { margin-top: 14px; }
-        .lines th { padding: 7px 6px; color: #fff; background: #1e3a8a; font-size: 7.5px; text-align: left; text-transform: uppercase; letter-spacing: .4px; }
+        .lines th { padding: 7px 6px; color: #fff; background: #4338ca; font-size: 7.5px; text-align: left; text-transform: uppercase; letter-spacing: .4px; }
         .lines td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; }
         .lines tbody tr:nth-child(even) td { background: #f9fafb; }
         .lines .num { text-align: right; white-space: nowrap; }
@@ -78,11 +78,11 @@
         .tax-table th { padding: 4px 6px; color: #4b5563; background: #f3f4f6; font-size: 7.5px; text-align: right; text-transform: uppercase; }
         .tax-table th:first-child, .tax-table td:first-child { text-align: left; }
         .tax-table td { padding: 4px 6px; border-bottom: 1px solid #f3f4f6; text-align: right; }
-        .words { margin-top: 10px; padding: 8px 10px; border-left: 3px solid #1e3a8a; background: #f9fafb; }
+        .words { margin-top: 10px; padding: 8px 10px; border-left: 3px solid #4338ca; background: #f9fafb; }
         .totals td { padding: 3px 8px; }
         .totals td:last-child { text-align: right; white-space: nowrap; }
-        .totals .grand td { padding: 6px 8px; color: #fff; background: #1e3a8a; font-size: 12px; font-weight: bold; }
-        .totals .due td { padding: 6px 8px; border-top: 2px solid #1e3a8a; border-bottom: 2px solid #1e3a8a; font-size: 11px; font-weight: bold; }
+        .totals .grand td { padding: 6px 8px; color: #fff; background: #4338ca; font-size: 12px; font-weight: bold; }
+        .totals .due td { padding: 6px 8px; border-top: 2px solid #4338ca; border-bottom: 2px solid #4338ca; font-size: 11px; font-weight: bold; }
 
         .section { margin-top: 10px; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 4px; white-space: pre-line; }
 
@@ -94,7 +94,7 @@
 
         /* Contrôle */
         .control { margin-top: 12px; }
-        .qr { width: 78px; height: 78px; }
+        .qr { width: 96px; height: 96px; }
         .code { color: #111827; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
 
         /* Filigrane */
@@ -111,6 +111,13 @@
             .footer { position: fixed; left: 0; right: 0; bottom: 0; }
             .watermark { position: fixed; }
         }
+        @unless ($forPdf)
+            /* Aperçu écran : la feuille A4 est agrandie pour être lisible sur grand écran. */
+            body { background: #f3f4f6; }
+            .toolbar { box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+            @media screen and (min-width: 1200px) { .page, .alert { zoom: 1.3; } }
+            @media screen and (min-width: 1600px) { .page, .alert { zoom: 1.5; } }
+        @endunless
         @if ($forPdf)
             body { background: #fff; }
             .page { max-width: none; min-height: 0; margin: 0; padding: 0; box-shadow: none; overflow: visible; }
@@ -308,7 +315,7 @@
                     <table>
                         <tr>
                             @if ($qrCode)
-                                <td style="width: 84px"><img class="qr" src="{{ $qrCode }}" alt="QR code de vérification"></td>
+                                <td style="width: 104px"><img class="qr" src="{{ $qrCode }}" alt="QR code de vérification"></td>
                             @endif
                             <td>
                                 @if ($fingerprint)

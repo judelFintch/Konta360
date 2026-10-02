@@ -6,6 +6,7 @@ use App\Http\Requests\InvoiceDraftRequest;
 use App\Models\CompanySetting;
 use App\Models\Invoice;
 use App\Models\Quote;
+use App\Models\User;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
@@ -26,7 +27,7 @@ class InvoiceController extends Controller
         $status = $request->query('status');
 
         $invoices = Invoice::query()
-            ->with('party')
+            ->with(['party', 'recordedPayments', 'creditNotes'])
             ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('number', 'like', "%{$search}%")
                     ->orWhereHas('party', fn ($query) => $query->where('name', 'like', "%{$search}%"));
@@ -40,15 +41,36 @@ class InvoiceController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('invoices.index', compact('invoices', 'search', 'status'));
+        $validated = Invoice::query()
+            ->where('status', InvoiceStatus::Validated)
+            ->with(['recordedPayments', 'creditNotes'])
+            ->get();
+        $summary = $validated->groupBy('currency')->map(fn ($invoices) => [
+            'invoiced' => round((float) $invoices->sum('total'), 2),
+            'collected' => round((float) $invoices->sum(fn (Invoice $invoice) => $invoice->paidAmount()), 2),
+            'outstanding' => round((float) $invoices->sum(fn (Invoice $invoice) => $invoice->balanceDue()), 2),
+            'overdue_count' => $invoices->filter(fn (Invoice $invoice) => $invoice->isOverdue())->count(),
+            'overdue_amount' => round((float) $invoices->filter(fn (Invoice $invoice) => $invoice->isOverdue())->sum(fn (Invoice $invoice) => $invoice->balanceDue()), 2),
+        ]);
+        $counts = Invoice::query()->toBase()->selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status');
+
+        return view('invoices.index', compact('invoices', 'search', 'status', 'summary', 'counts'));
     }
 
     public function show(Invoice $invoice): View
     {
         $this->requirePermission(Permission::InvoicesView);
-        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder']);
+        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder', 'recordedPayments', 'creditNotes']);
+        $presenter = app(CommercialDocumentPresenter::class);
+        $verifiable = $presenter->isVerifiable($invoice);
 
-        return view('invoices.show', compact('invoice'));
+        return view('invoices.show', [
+            'invoice' => $invoice,
+            'fingerprint' => $verifiable ? $presenter->fingerprint($invoice) : null,
+            'verificationUrl' => $verifiable ? $presenter->verificationUrl($invoice) : null,
+            'validator' => $invoice->validated_by ? User::find($invoice->validated_by) : null,
+            'canceller' => $invoice->cancelled_by ? User::find($invoice->cancelled_by) : null,
+        ]);
     }
 
     public function print(Invoice $invoice): View

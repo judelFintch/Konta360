@@ -9,11 +9,11 @@ use App\Models\Quote;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Quotes\Enums\QuoteStatus;
 use Barryvdh\DomPDF\Facade\Pdf;
-use chillerlan\QRCode\Output\QRGdImagePNG;
+use chillerlan\QRCode\Common\EccLevel;
+use chillerlan\QRCode\Output\QROutputInterface;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\URL;
 use NumberFormatter;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -115,12 +115,25 @@ class CommercialDocumentPresenter
         return implode('-', str_split($hash, 4));
     }
 
+    /**
+     * Short public link printed as a QR code. The token is an HMAC of the
+     * document identity: it does not depend on the scheme or host the link
+     * is opened with (http/https, proxy, www), and keeps the QR code small.
+     */
     public function verificationUrl(Model $document): string
     {
-        return URL::signedRoute('documents.verify', [
-            'type' => $this->typeOf($document),
+        $type = $this->typeOf($document);
+
+        return route('documents.verify', [
+            'type' => $type,
             'id' => $document->getKey(),
+            'token' => $this->verificationToken($type, $document->getKey()),
         ]);
+    }
+
+    public function verificationToken(string $type, int|string $id): string
+    {
+        return substr(hash_hmac('sha256', $type.'|'.$id, config('app.key')), 0, 20);
     }
 
     public function amountInWords(float $amount, string $currency): string
@@ -181,9 +194,11 @@ class CommercialDocumentPresenter
     private function qrCode(string $data): string
     {
         $options = new QROptions([
-            'outputInterface' => QRGdImagePNG::class,
-            'scale' => 4,
-            'quietzoneSize' => 1,
+            // PNG rather than the library's default SVG: dompdf renders SVG poorly.
+            'outputType' => QROutputInterface::GDIMAGE_PNG,
+            'eccLevel' => EccLevel::M,
+            'scale' => 6,
+            'quietzoneSize' => 2,
             'outputBase64' => true,
         ]);
 
