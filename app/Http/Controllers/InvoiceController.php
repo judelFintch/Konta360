@@ -11,6 +11,7 @@ use App\Models\TreasuryAccount;
 use App\Models\User;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Invoices\Enums\InvoiceStatus;
@@ -78,20 +79,21 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function print(Invoice $invoice): View
+    public function print(Request $request, Invoice $invoice): View
     {
         $this->requirePermission(Permission::InvoicesView);
 
-        return view('documents.commercial', $this->documentData($invoice, false));
+        return view('documents.commercial', $this->documentData($invoice, false, $this->printLanguage($request, $invoice)));
     }
 
-    public function pdf(Invoice $invoice): Response
+    public function pdf(Request $request, Invoice $invoice): Response
     {
         $this->requirePermission(Permission::InvoicesView);
-        $filename = ($invoice->number ?: 'facture-brouillon-'.$invoice->id).'.pdf';
+        $language = $this->printLanguage($request, $invoice);
+        $filename = ($invoice->number ?: ($language === DocumentLanguage::English ? 'draft-invoice-' : 'facture-brouillon-').$invoice->id).'.pdf';
 
         return app(CommercialDocumentPresenter::class)
-            ->download($this->documentData($invoice, true), $filename);
+            ->download($this->documentData($invoice, true, $language), $filename);
     }
 
     public function convert(Quote $quote): RedirectResponse
@@ -100,7 +102,7 @@ class InvoiceController extends Controller
         $this->requirePermission(Permission::InvoicesCreate);
 
         $invoice = DB::transaction(function () use ($quote) {
-            $quote = Quote::query()->with('lines')->lockForUpdate()->findOrFail($quote->id);
+            $quote = Quote::query()->with(['lines', 'party'])->lockForUpdate()->findOrFail($quote->id);
             abort_unless(
                 in_array($quote->status, [QuoteStatus::Draft, QuoteStatus::Sent, QuoteStatus::Accepted], true),
                 409,
@@ -115,6 +117,7 @@ class InvoiceController extends Controller
                 'issue_date' => today(),
                 'due_date' => today()->addDays(CompanySetting::current()->default_payment_days),
                 'currency' => $quote->currency,
+                'language' => $quote->party->document_language ?? DocumentLanguage::French,
                 'notes' => $quote->notes,
                 'subtotal' => $quote->subtotal,
                 'discount_total' => $quote->discount_total,
@@ -174,6 +177,7 @@ class InvoiceController extends Controller
                 'issue_date' => $data['issue_date'],
                 'due_date' => $data['due_date'],
                 'notes' => $data['notes'],
+                'language' => $data['language'] ?? $invoice->language,
                 'deductions_total' => round((float) collect($deductions)->sum('amount'), 2),
             ]);
             $invoice->deductions()->delete();
@@ -311,18 +315,31 @@ class InvoiceController extends Controller
         return $deductions;
     }
 
-    private function documentData(Invoice $invoice, bool $forPdf): array
+    /**
+     * The invoice is printed in its own language unless another one is asked
+     * for: the language changes neither the amounts nor the control code.
+     */
+    private function printLanguage(Request $request, Invoice $invoice): DocumentLanguage
     {
+        return DocumentLanguage::tryFrom((string) $request->query('lang'))
+            ?? $invoice->language
+            ?? DocumentLanguage::French;
+    }
+
+    private function documentData(Invoice $invoice, bool $forPdf, DocumentLanguage $language): array
+    {
+        $locale = $language->value;
         $invoice->load(['party', 'lines', 'quote', 'creator', 'deductions', 'recordedPayments', 'creditNotes']);
 
         return [
-            ...app(CommercialDocumentPresenter::class)->present($invoice),
+            ...app(CommercialDocumentPresenter::class)->present($invoice, $language),
             'document' => $invoice,
-            'documentType' => 'Facture',
-            'documentNumber' => $invoice->number ?: 'Brouillon #'.$invoice->id,
-            'secondaryDateLabel' => 'Échéance',
+            'documentType' => __('document.invoice', [], $locale),
+            'documentNumber' => $invoice->number ?: __('document.draft_number', ['id' => $invoice->id], $locale),
+            'statusLabel' => __("document.invoice_status.{$invoice->status->value}", [], $locale),
+            'secondaryDateLabel' => __('document.due_date', [], $locale),
             'secondaryDate' => $invoice->due_date,
-            'reference' => $invoice->quote ? ['Devis d’origine', $invoice->quote->number] : null,
+            'reference' => $invoice->quote ? [__('document.origin_quote', [], $locale), $invoice->quote->number] : null,
             'settlement' => $invoice->status === InvoiceStatus::Validated ? [
                 'credited' => $invoice->creditedAmount(),
                 // Advances already appear among the deductions.
@@ -330,7 +347,7 @@ class InvoiceController extends Controller
                 'balance' => $invoice->balanceDue(),
             ] : null,
             'backUrl' => route('invoices.show', $invoice),
-            'pdfUrl' => route('invoices.pdf', $invoice),
+            'pdfUrl' => route('invoices.pdf', [$invoice, 'lang' => $locale]),
             'forPdf' => $forPdf,
         ];
     }

@@ -1,4 +1,5 @@
 @php
+    use App\Modules\Documents\Enums\DocumentLanguage;
     use App\Modules\Invoices\Enums\DeductionType;
     use App\Modules\Payments\Enums\PaymentMethod;
 
@@ -42,6 +43,16 @@
                         <x-input-label for="due_date" value="Date d’échéance *" />
                         <x-text-input id="due_date" name="due_date" type="date" class="mt-1 block w-full" :value="old('due_date', $invoice->due_date->format('Y-m-d'))" required />
                         <x-input-error :messages="$errors->get('due_date')" class="mt-2" />
+                    </div>
+                    <div>
+                        <x-input-label for="language" value="Langue de la facture *" />
+                        <select id="language" name="language" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            @foreach (DocumentLanguage::cases() as $language)
+                                <option value="{{ $language->value }}" @selected(old('language', $invoice->language?->value ?? DocumentLanguage::French->value) === $language->value)>{{ $language->label() }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Reprise de la fiche client ; les notes saisies ne sont pas traduites.</p>
+                        <x-input-error :messages="$errors->get('language')" class="mt-2" />
                     </div>
                     <div class="sm:col-span-2">
                         <x-input-label for="notes" value="Notes et conditions" />

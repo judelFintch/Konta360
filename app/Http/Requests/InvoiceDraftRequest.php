@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Payments\Enums\PaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
@@ -22,6 +23,7 @@ class InvoiceDraftRequest extends FormRequest
             'issue_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
             'notes' => ['nullable', 'string', 'max:3000'],
+            'language' => ['sometimes', 'required', Rule::enum(DocumentLanguage::class)],
             'deductions' => ['nullable', 'array', 'max:20'],
             'deductions.*.type' => ['required', Rule::enum(DeductionType::class)],
             'deductions.*.description' => ['required', 'string', 'max:255'],

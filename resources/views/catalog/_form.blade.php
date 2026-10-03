@@ -1,4 +1,7 @@
-@php use App\Modules\Catalog\Enums\ItemType; @endphp
+@php
+    use App\Modules\Catalog\Enums\ItemType;
+    use App\Modules\Catalog\Enums\Unit;
+@endphp
 
 <div class="grid gap-6 md:grid-cols-2">
     <div>
@@ -23,9 +26,22 @@
         <x-input-error :messages="$errors->get('type')" class="mt-2" />
     </div>
 
-    <div>
+    @php
+        $currentUnit = old('unit', $catalogItem?->unit ?? Unit::Unit->value);
+        $isStandardUnit = Unit::tryFrom((string) $currentUnit) !== null;
+    @endphp
+    <div x-data="{ unit: @js($isStandardUnit ? $currentUnit : Unit::OTHER) }">
         <x-input-label for="unit" value="Unité *" />
-        <x-text-input id="unit" name="unit" class="mt-1 block w-full" :value="old('unit', $catalogItem?->unit ?? 'unité')" required />
+        <select id="unit" name="unit" x-model="unit" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            @foreach (Unit::cases() as $unit)
+                <option value="{{ $unit->value }}" @selected($isStandardUnit && $currentUnit === $unit->value)>{{ $unit->label() }}</option>
+            @endforeach
+            <option value="{{ Unit::OTHER }}" @selected(! $isStandardUnit)>Autre…</option>
+        </select>
+        <div x-show="unit === @js(Unit::OTHER)" @style(['display: none' => $isStandardUnit]) class="mt-2">
+            <x-text-input id="unit_other" name="unit_other" maxlength="30" class="block w-full" placeholder="Précisez l’unité" :value="old('unit_other', $isStandardUnit ? '' : $currentUnit)" x-bind:required="unit === @js(Unit::OTHER)" />
+            <p class="mt-1 text-xs text-gray-500">Une unité hors liste s’imprime telle quelle, sans traduction.</p>
+        </div>
         <x-input-error :messages="$errors->get('unit')" class="mt-2" />
     </div>
 

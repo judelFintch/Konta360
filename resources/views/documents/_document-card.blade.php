@@ -41,7 +41,7 @@
                             <p class="font-medium text-gray-900">{{ $line->description }}</p>
                             <p class="text-xs text-gray-500">Réf. {{ $line->sku }}</p>
                         </td>
-                        <td class="whitespace-nowrap px-4 py-4 text-right">{{ rtrim(rtrim(number_format((float) $line->quantity, 3, ',', ' '), '0'), ',') }} <span class="text-xs text-gray-500">{{ $line->unit }}</span></td>
+                        <td class="whitespace-nowrap px-4 py-4 text-right">{{ rtrim(rtrim(number_format((float) $line->quantity, 3, ',', ' '), '0'), ',') }} <span class="text-xs text-gray-500">{{ \App\Modules\Catalog\Enums\Unit::display($line->unit) }}</span></td>
                         <td class="whitespace-nowrap px-4 py-4 text-right">{{ $money($line->unit_price) }}</td>
                         <td class="whitespace-nowrap px-4 py-4 text-right text-gray-500">{{ (float) $line->discount_rate > 0 ? $money($line->discount_rate).' %' : '—' }}</td>
                         <td class="whitespace-nowrap px-4 py-4 text-right text-gray-500">{{ $money($line->tax_rate) }} %</td>

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Modules\Catalog\Enums\ItemType;
+use App\Modules\Catalog\Enums\Unit;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -11,6 +12,11 @@ class CatalogItemRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    public function attributes(): array
+    {
+        return ['unit' => 'unité'];
     }
 
     public function rules(): array
@@ -39,6 +45,10 @@ class CatalogItemRequest extends FormRequest
             'sku' => mb_strtoupper(trim((string) $this->sku)),
             'description' => $this->filled('description') ? trim((string) $this->description) : null,
             'is_active' => $this->boolean('is_active'),
+            // « Autre » in the list: the unit is the text typed next to it.
+            'unit' => $this->input('unit') === Unit::OTHER
+                ? trim((string) $this->input('unit_other'))
+                : $this->input('unit'),
         ]);
     }
 }

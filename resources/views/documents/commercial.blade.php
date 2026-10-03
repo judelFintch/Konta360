@@ -1,5 +1,13 @@
 @php
-    $money = fn ($value) => number_format((float) $value, 2, ',', ' ');
+    $locale ??= 'fr';
+    $t = fn (string $key, array $replace = []) => __('document.'.$key, $replace, $locale);
+    [$decimalPoint, $thousands] = $locale === 'en' ? ['.', ','] : [',', ' '];
+    $money = fn ($value) => number_format((float) $value, 2, $decimalPoint, $thousands);
+    // Quantities and unit prices without trailing zeros: « 199 », « 462,9033 ».
+    $number = fn ($value, int $decimals) => rtrim(rtrim(number_format((float) $value, $decimals, $decimalPoint, $thousands), '0'), $decimalPoint);
+    $statusLabel ??= $document->status->label();
+    // French typography puts a space before the colon, English does not.
+    $colon = $locale === 'en' ? ':' : ' :';
     $asset = fn (string $type) => $forPdf
         ? Storage::disk('public')->path($company->{$type.'_path'})
         : route('administration.company.asset', $type);
@@ -19,7 +27,7 @@
     ]));
 @endphp
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ $locale }}">
 <head>
     <meta charset="utf-8">
     <title>{{ $documentType }} {{ $documentNumber }} — {{ $company->name }}</title>
@@ -157,22 +165,22 @@
                     <div class="company-name">{{ $company->name }}@if ($company->legal_form) <span class="muted" style="font-size: 11px; font-weight: normal">{{ $company->legal_form }}</span>@endif</div>
                     <div class="company-meta">
                         @if ($company->address){!! nl2br(e($company->address)) !!}<br>@endif
-                        {{ implode(' · ', array_filter([$company->phone ? 'Tél. '.$company->phone : null, $company->email, $company->website])) }}
+                        {{ implode(' · ', array_filter([$company->phone ? $t('phone').' '.$company->phone : null, $company->email, $company->website])) }}
                     </div>
                 </td>
                 <td class="right">
                     <h1 class="doc-title">{{ $documentType }}</h1>
                     <table class="meta">
-                        <tr><td>N°</td><td class="strong nowrap">{{ $documentNumber }}</td></tr>
-                        <tr><td>Date d’émission</td><td class="strong">{{ $document->issue_date->format('d/m/Y') }}</td></tr>
+                        <tr><td>{{ $t('number') }}</td><td class="strong nowrap">{{ $documentNumber }}</td></tr>
+                        <tr><td>{{ $t('issue_date') }}</td><td class="strong">{{ $document->issue_date->format('d/m/Y') }}</td></tr>
                         @isset($secondaryDate)
                             <tr><td>{{ $secondaryDateLabel }}</td><td class="strong">{{ $secondaryDate->format('d/m/Y') }}</td></tr>
                         @endisset
                         @if ($reference ?? null)
                             <tr><td>{{ $reference[0] }}</td><td class="strong">{{ $reference[1] }}</td></tr>
                         @endif
-                        <tr><td>Devise</td><td class="strong">{{ $document->currency }}</td></tr>
-                        <tr><td>Statut</td><td><span class="status">{{ $document->status->label() }}</span></td></tr>
+                        <tr><td>{{ $t('currency') }}</td><td class="strong">{{ $document->currency }}</td></tr>
+                        <tr><td>{{ $t('status') }}</td><td><span class="status">{{ $statusLabel }}</span></td></tr>
                     </table>
                 </td>
             </tr>
@@ -183,17 +191,17 @@
             <tr>
                 <td style="padding-right: 8px">
                     <div class="box">
-                        <div class="label">Émetteur</div>
+                        <div class="label">{{ $t('issuer') }}</div>
                         <div class="party-name">{{ $company->name }}</div>
-                        @foreach ($legalIds as $label => $value)<div><span class="muted">{{ $label }} :</span> {{ $value }}</div>@endforeach
-                        @if ($company->representative_name)<div><span class="muted">Représenté par :</span> {{ $company->representative_name }}@if ($company->representative_title), {{ $company->representative_title }}@endif</div>@endif
+                        @foreach ($legalIds as $label => $value)<div><span class="muted">{{ $label }}{{ $colon }}</span> {{ $value }}</div>@endforeach
+                        @if ($company->representative_name)<div><span class="muted">{{ $t('represented_by') }}{{ $colon }}</span> {{ $company->representative_name }}@if ($company->representative_title), {{ $company->representative_title }}@endif</div>@endif
                     </div>
                 </td>
                 <td style="padding-left: 8px">
                     <div class="box client">
-                        <div class="label">{{ $isQuote ? 'Adressé à' : 'Facturé à' }}</div>
+                        <div class="label">{{ $isQuote ? $t('addressed_to') : $t('billed_to') }}</div>
                         <div class="party-name">{{ $document->party->name }}</div>
-                        @if ($document->party->tax_identifier)<div><span class="muted">NIF :</span> {{ $document->party->tax_identifier }}</div>@endif
+                        @if ($document->party->tax_identifier)<div><span class="muted">{{ $t('tax_id') }}{{ $colon }}</span> {{ $document->party->tax_identifier }}</div>@endif
                         @if ($document->party->address)<div>{!! nl2br(e($document->party->address)) !!}</div>@endif
                         @if ($document->party->phone || $document->party->email)<div>{{ implode(' · ', array_filter([$document->party->phone, $document->party->email])) }}</div>@endif
                     </div>
@@ -205,21 +213,21 @@
         <table class="lines">
             <thead>
                 <tr>
-                    <th style="width: 4%">N°</th>
-                    <th style="width: 36%">Désignation</th>
-                    <th class="num">Qté</th>
-                    <th class="num">P.U. HT</th>
-                    <th class="num">Rem.</th>
-                    <th class="num">TVA</th>
-                    <th class="num">Montant HT</th>
+                    <th style="width: 4%">{{ $t('line_number') }}</th>
+                    <th style="width: 36%">{{ $t('description') }}</th>
+                    <th class="num">{{ $t('quantity') }}</th>
+                    <th class="num">{{ $t('unit_price_excl') }}</th>
+                    <th class="num">{{ $t('discount') }}</th>
+                    <th class="num">{{ $t('vat') }}</th>
+                    <th class="num">{{ $t('amount_excl') }}</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($document->lines as $line)
                     <tr>
                         <td class="muted">{{ $loop->iteration }}</td>
-                        <td><span class="strong">{{ $line->description }}</span><br><span class="sku">Réf. {{ $line->sku }}</span></td>
-                        <td class="num">{{ rtrim(rtrim(number_format((float) $line->quantity, 3, ',', ' '), '0'), ',') }} <span class="sku">{{ $line->unit }}</span></td>
+                        <td><span class="strong">{{ $line->description }}</span><br><span class="sku">{{ $t('reference') }} {{ $line->sku }}</span></td>
+                        <td class="num">{{ $number($line->quantity, 3) }} <span class="sku">{{ \App\Modules\Catalog\Enums\Unit::display($line->unit, $locale) }}</span></td>
                         <td class="num">{{ $money($line->unit_price) }}</td>
                         <td class="num">{{ (float) $line->discount_rate > 0 ? $money($line->discount_rate).' %' : '—' }}</td>
                         <td class="num">{{ $money($line->tax_rate) }} %</td>
@@ -234,11 +242,11 @@
             <table class="lines">
                 <thead>
                     <tr>
-                        <th style="width: 4%">N°</th>
-                        <th style="width: 52%">Déductions</th>
-                        <th class="num">Qté</th>
-                        <th class="num">P.U.</th>
-                        <th class="num">Montant</th>
+                        <th style="width: 4%">{{ $t('line_number') }}</th>
+                        <th style="width: 52%">{{ $t('deductions') }}</th>
+                        <th class="num">{{ $t('quantity') }}</th>
+                        <th class="num">{{ $t('unit_price') }}</th>
+                        <th class="num">{{ $t('amount') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -247,10 +255,10 @@
                             <td class="muted">{{ $loop->iteration }}</td>
                             <td>
                                 <span class="strong">{{ $deduction->description }}</span><br>
-                                <span class="sku">{{ $deduction->type->label() }}@if ($deduction->received_on) · reçue le {{ $deduction->received_on->format('d/m/Y') }}@endif</span>
+                                <span class="sku">{{ $t('deduction_type.'.$deduction->type->value) }}@if ($deduction->received_on) · {{ $t('received_on', ['date' => $deduction->received_on->format('d/m/Y')]) }}@endif</span>
                             </td>
-                            <td class="num">{{ rtrim(rtrim(number_format((float) $deduction->quantity, 3, ',', ' '), '0'), ',') }}</td>
-                            <td class="num">{{ rtrim(rtrim(number_format((float) $deduction->unit_price, 4, ',', ' '), '0'), ',') }}</td>
+                            <td class="num">{{ $number($deduction->quantity, 3) }}</td>
+                            <td class="num">{{ $number($deduction->unit_price, 4) }}</td>
                             <td class="num strong">{{ $money($deduction->amount) }}</td>
                         </tr>
                     @endforeach
@@ -263,7 +271,7 @@
             <tr>
                 <td>
                     <table class="tax-table">
-                        <thead><tr><th>Taux TVA</th><th>Base HT</th><th>Montant TVA</th></tr></thead>
+                        <thead><tr><th>{{ $t('vat_rate') }}</th><th>{{ $t('base_excl') }}</th><th>{{ $t('vat_amount') }}</th></tr></thead>
                         <tbody>
                             @foreach ($taxBreakdown as $row)
                                 <tr><td>{{ $money($row['rate']) }} %</td><td>{{ $money($row['base']) }}</td><td>{{ $money($row['tax']) }}</td></tr>
@@ -271,32 +279,32 @@
                         </tbody>
                     </table>
                     <div class="words">
-                        <div class="label">{{ match (true) { $isQuote => 'Le présent devis s’élève à la somme de', $document instanceof \App\Models\CreditNote => 'Arrêté le présent avoir à la somme de', default => 'Arrêtée la présente facture à la somme de' } }}</div>
-                        <span class="strong">{{ $amountInWords }}</span>&nbsp;TTC.
+                        <div class="label">{{ match (true) { $isQuote => $t('words_quote'), $document instanceof \App\Models\CreditNote => $t('words_credit_note'), default => $t('words_invoice') } }}</div>
+                        <span class="strong">{{ $amountInWords }}</span>&nbsp;{{ $t('incl_tax') }}.
                         @if ($netPayableInWords ?? null)
-                            <div class="label" style="margin-top: 6px">Soit, après déductions, un net à payer de</div>
+                            <div class="label" style="margin-top: 6px">{{ $t('words_net_payable') }}</div>
                             <span class="strong">{{ $netPayableInWords }}</span>.
                         @endif
                     </div>
                 </td>
                 <td>
                     <table class="totals">
-                        <tr><td class="muted">Total brut HT</td><td>{{ $money($document->subtotal) }}</td></tr>
+                        <tr><td class="muted">{{ $t('gross_total_excl') }}</td><td>{{ $money($document->subtotal) }}</td></tr>
                         @if ((float) $document->discount_total > 0)
-                            <tr><td class="muted">Remises</td><td>− {{ $money($document->discount_total) }}</td></tr>
+                            <tr><td class="muted">{{ $t('discounts') }}</td><td>− {{ $money($document->discount_total) }}</td></tr>
                         @endif
-                        <tr><td class="muted">Total net HT</td><td>{{ $money($netTotal) }}</td></tr>
-                        <tr><td class="muted">Total TVA</td><td>{{ $money($document->tax_total) }}</td></tr>
-                        <tr class="grand"><td>Total TTC</td><td>{{ $money($document->total) }} {{ $document->currency }}</td></tr>
+                        <tr><td class="muted">{{ $t('net_total_excl') }}</td><td>{{ $money($netTotal) }}</td></tr>
+                        <tr><td class="muted">{{ $t('total_vat') }}</td><td>{{ $money($document->tax_total) }}</td></tr>
+                        <tr class="grand"><td>{{ $t('total_incl') }}</td><td>{{ $money($document->total) }} {{ $document->currency }}</td></tr>
                         @if ($netPayableInWords ?? null)
-                            <tr><td class="muted">Total déductions</td><td>− {{ $money($document->deductions_total) }}</td></tr>
-                            <tr class="due"><td>Net à payer</td><td>{{ $money($document->netPayable()) }} {{ $document->currency }}</td></tr>
+                            <tr><td class="muted">{{ $t('total_deductions') }}</td><td>− {{ $money($document->deductions_total) }}</td></tr>
+                            <tr class="due"><td>{{ $t('net_payable') }}</td><td>{{ $money($document->netPayable()) }} {{ $document->currency }}</td></tr>
                         @endif
                         {{-- Après déductions, le reste à payer n’apporte rien tant que rien d’autre n’est réglé. --}}
                         @if (($settlement ?? null) && (! ($netPayableInWords ?? null) || $settlement['credited'] > 0 || $settlement['paid'] > 0))
-                            @if ($settlement['credited'] > 0)<tr><td class="muted">Avoirs imputés</td><td>− {{ $money($settlement['credited']) }}</td></tr>@endif
-                            @if ($settlement['paid'] > 0)<tr><td class="muted">Règlements reçus</td><td>− {{ $money($settlement['paid']) }}</td></tr>@endif
-                            <tr class="due"><td>{{ ($netPayableInWords ?? null) ? 'Reste à payer' : 'Net à payer' }}</td><td>{{ $money($settlement['balance']) }} {{ $document->currency }}</td></tr>
+                            @if ($settlement['credited'] > 0)<tr><td class="muted">{{ $t('credited') }}</td><td>− {{ $money($settlement['credited']) }}</td></tr>@endif
+                            @if ($settlement['paid'] > 0)<tr><td class="muted">{{ $t('payments_received') }}</td><td>− {{ $money($settlement['paid']) }}</td></tr>@endif
+                            <tr class="due"><td>{{ ($netPayableInWords ?? null) ? $t('remaining_due') : $t('net_payable') }}</td><td>{{ $money($settlement['balance']) }} {{ $document->currency }}</td></tr>
                         @endif
                     </table>
                 </td>
@@ -304,7 +312,7 @@
         </table>
 
         @if ($notesText ?? $document->notes)
-            <div class="section"><div class="label">{{ $notesLabel ?? 'Notes' }}</div>{{ $notesText ?? $document->notes }}</div>
+            <div class="section"><div class="label">{{ $notesLabel ?? $t('notes') }}</div>{{ $notesText ?? $document->notes }}</div>
         @endif
 
         @if (! $isQuote || $company->invoice_footer)
@@ -313,18 +321,18 @@
                     @if ($company->bank_name || $company->mobile_money)
                         <td style="width: 50%; padding-right: 8px">
                             <div class="section" style="white-space: normal">
-                                <div class="label">Modalités de paiement</div>
+                                <div class="label">{{ $t('payment_terms') }}</div>
                                 @if ($company->bank_name)<span class="strong">{{ $company->bank_name }}</span>@if ($company->bank_account_name) — {{ $company->bank_account_name }}@endif<br>@endif
-                                @if ($company->bank_account_number)Compte : <span class="mono">{{ $company->bank_account_number }}</span><br>@endif
-                                @if ($company->bank_swift)SWIFT : <span class="mono">{{ $company->bank_swift }}</span><br>@endif
-                                @if ($company->mobile_money)Mobile Money : {{ $company->mobile_money }}<br>@endif
-                                @if ($documentNumber && ! $isQuote)<span class="muted">Merci de rappeler la référence {{ $documentNumber }} lors du paiement.</span>@endif
+                                @if ($company->bank_account_number){{ $t('bank_account') }}{{ $colon }} <span class="mono">{{ $company->bank_account_number }}</span><br>@endif
+                                @if ($company->bank_swift)SWIFT{{ $colon }} <span class="mono">{{ $company->bank_swift }}</span><br>@endif
+                                @if ($company->mobile_money)Mobile Money{{ $colon }} {{ $company->mobile_money }}<br>@endif
+                                @if ($documentNumber && ! $isQuote)<span class="muted">{{ $t('payment_reference', ['number' => $documentNumber]) }}</span>@endif
                             </div>
                         </td>
                     @endif
                     @if ($company->invoice_footer)
                         <td style="padding-left: {{ $company->bank_name || $company->mobile_money ? '8px' : '0' }}">
-                            <div class="section"><div class="label">Conditions</div>{{ $company->invoice_footer }}</div>
+                            <div class="section"><div class="label">{{ $t('conditions') }}</div>{{ $company->invoice_footer }}</div>
                         </td>
                     @endif
                 </tr>
@@ -337,8 +345,8 @@
                 <tr>
                     <td style="padding-right: 8px">
                         <div class="sign-box">
-                            <div class="label">Bon pour accord — le client</div>
-                            <div class="muted">Date, nom, signature et cachet précédés de la mention « Bon pour accord »</div>
+                            <div class="label">{{ $t('customer_approval') }}</div>
+                            <div class="muted">{{ $t('customer_approval_hint') }}</div>
                         </div>
                     </td>
                     <td style="padding-left: 8px">@include('documents._company-signature')</td>
@@ -357,18 +365,18 @@
                             @endif
                             <td>
                                 @if ($fingerprint)
-                                    <div class="label">Code de contrôle</div>
+                                    <div class="label">{{ $t('control_code') }}</div>
                                     <div class="code mono">{{ $fingerprint }}</div>
-                                    <div class="muted">Scannez le QR code pour vérifier l’authenticité du document, son code et son montant.</div>
+                                    <div class="muted">{{ $t('control_hint') }}</div>
                                 @else
-                                    <div class="label">Document provisoire</div>
-                                    <div class="muted">Ce brouillon n’a pas de numéro définitif : il n’a aucune valeur comptable ni fiscale.</div>
+                                    <div class="label">{{ $t('provisional') }}</div>
+                                    <div class="muted">{{ $t('provisional_hint') }}</div>
                                 @endif
                                 <div class="muted" style="margin-top: 4px; font-size: 7.5px">
-                                    {{ $document->lines->count() }} ligne(s)
-                                    @if ($document->creator) · Établi par {{ $document->creator->name }}@endif
-                                    @if ($document instanceof \App\Models\Invoice && $document->validated_at) · Validée le {{ $document->validated_at->format('d/m/Y à H:i') }}@endif
-                                    · Édité le {{ now()->format('d/m/Y à H:i') }}
+                                    {{ $t('lines_count', ['count' => $document->lines->count()]) }}
+                                    @if ($document->creator) · {{ $t('prepared_by', ['name' => $document->creator->name]) }}@endif
+                                    @if ($document instanceof \App\Models\Invoice && $document->validated_at) · {{ $t('validated_on', ['date' => $document->validated_at->format('d/m/Y'), 'time' => $document->validated_at->format('H:i')]) }}@endif
+                                    · {{ $t('printed_on', ['date' => now()->format('d/m/Y'), 'time' => now()->format('H:i')]) }}
                                 </div>
                             </td>
                         </tr>

@@ -50,7 +50,7 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-4">
                                         <div class="font-medium text-gray-900">{{ $item->name }}</div>
-                                        <div class="text-sm text-gray-500">{{ $item->sku }} · {{ $item->unit }}</div>
+                                        <div class="text-sm text-gray-500">{{ $item->sku }} · {{ \App\Modules\Catalog\Enums\Unit::display($item->unit) }}</div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-700">{{ $item->type->label() }}</td>
                                     <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">

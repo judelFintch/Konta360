@@ -1,8 +1,11 @@
 @php
     use App\Modules\Administration\Enums\Permission;
+    use App\Modules\Documents\Enums\DocumentLanguage;
     use App\Modules\Invoices\Enums\InvoiceStatus;
 
     $money = fn ($value) => number_format((float) $value, 2, ',', ' ');
+    $printLanguage = $invoice->language ?? DocumentLanguage::French;
+    $otherLanguage = $printLanguage === DocumentLanguage::French ? DocumentLanguage::English : DocumentLanguage::French;
     $isDraft = $invoice->status === InvoiceStatus::Draft;
     $isValidated = $invoice->status === InvoiceStatus::Validated;
     $isCancelled = $invoice->status === InvoiceStatus::Cancelled;
@@ -54,8 +57,13 @@
                 </a>
                 <a href="{{ route('invoices.pdf', $invoice) }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-4-4m4 4 4-4M4 20h16"/></svg>
-                    PDF
+                    PDF {{ strtoupper($printLanguage->value) }}
                 </a>
+                {{-- La même facture dans l’autre langue : montants et code de contrôle identiques. --}}
+                <span class="inline-flex items-center rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700">
+                    <a href="{{ route('invoices.print', [$invoice, 'lang' => $otherLanguage->value]) }}" target="_blank" class="px-3 py-2.5 hover:bg-gray-50" title="Aperçu en {{ strtolower($otherLanguage->label()) }}">Aperçu {{ strtoupper($otherLanguage->value) }}</a>
+                    <a href="{{ route('invoices.pdf', [$invoice, 'lang' => $otherLanguage->value]) }}" class="border-l border-gray-300 px-3 py-2.5 hover:bg-gray-50" title="PDF en {{ strtolower($otherLanguage->label()) }}">PDF {{ strtoupper($otherLanguage->value) }}</a>
+                </span>
                 @if ($isDraft)
                     @can(Permission::InvoicesUpdateDraft->value)
                         <a href="{{ route('invoices.edit', $invoice) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Modifier</a>
@@ -105,7 +113,7 @@
                         'meta' => [
                             ['Date d’émission', $invoice->issue_date->format('d/m/Y'), null, false],
                             ['Échéance', $invoice->due_date->format('d/m/Y'), null, $invoice->isOverdue()],
-                            ['Devise', $invoice->currency, null, false],
+                            ['Devise · langue', $invoice->currency.' · '.$printLanguage->label(), null, false],
                             ['Devis d’origine', $invoice->quote?->number ?? '—', $invoice->quote ? route('quotes.show', $invoice->quote) : null, false],
                         ],
                     ])
