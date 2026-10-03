@@ -245,3 +245,24 @@ it('includes deductions in the fingerprint only when there are some', function (
     expect($with)->not->toBe($without)
         ->and($presenter->fingerprint($this->invoice->fresh()))->toBe($without);
 });
+
+it('points to the deductions from a draft invoice without any', function () {
+    $this->actingAs($this->user)
+        ->get(route('invoices.show', $this->invoice))
+        ->assertOk()
+        ->assertSee('Ajouter des déductions')
+        ->assertSee(route('invoices.edit', $this->invoice).'#deductions', false);
+
+    $this->actingAs($this->user)
+        ->get(route('invoices.edit', $this->invoice))
+        ->assertSee('id="deductions"', false);
+});
+
+it('hides the deductions entry once the invoice is validated', function () {
+    $this->actingAs($this->user)->patch(route('invoices.validate', $this->invoice));
+
+    $this->actingAs($this->user)
+        ->get(route('invoices.show', $this->invoice))
+        ->assertOk()
+        ->assertDontSee('Ajouter des déductions');
+});

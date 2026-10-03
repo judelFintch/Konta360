@@ -150,6 +150,17 @@
                                 <div class="flex justify-between font-semibold"><dt class="text-gray-900">Net à payer</dt><dd class="text-indigo-700">{{ $money($invoice->netPayable()) }} {{ $invoice->currency }}</dd></div>
                             </dl>
                         </article>
+                    @elseif ($isDraft)
+                        {{-- Point d’entrée visible pour l’avance et les frais à déduire. --}}
+                        <article class="flex flex-col gap-4 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/40 p-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h2 class="font-semibold text-gray-900">Déductions</h2>
+                                <p class="mt-1 text-sm text-gray-600">Aucune déduction. Avance déjà reçue, frais d’opérateur ou de carburant payés par le client… : retranchez-les du total TTC pour obtenir le net à payer.</p>
+                            </div>
+                            @can(Permission::InvoicesUpdateDraft->value)
+                                <a href="{{ route('invoices.edit', $invoice) }}#deductions" class="shrink-0 rounded-lg bg-indigo-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Ajouter des déductions</a>
+                            @endcan
+                        </article>
                     @endif
 
                     {{-- Règlements et avoirs --}}

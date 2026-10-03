@@ -62,7 +62,7 @@
                 </div>
 
                 {{-- Déductions --}}
-                <div class="mt-8 border-t border-gray-100 pt-6">
+                <div id="deductions" class="mt-8 scroll-mt-24 border-t border-gray-100 pt-6">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <h2 class="font-semibold text-gray-900">Déductions</h2>
