@@ -1,4 +1,7 @@
-@php use App\Modules\Parties\Enums\PartyType; @endphp
+@php
+    use App\Modules\Documents\Enums\DocumentLanguage;
+    use App\Modules\Parties\Enums\PartyType;
+@endphp
 
 <div class="grid gap-6 md:grid-cols-2">
     <div>
@@ -35,6 +38,16 @@
         <x-input-label for="phone" value="Téléphone" />
         <x-text-input id="phone" name="phone" class="mt-1 block w-full" :value="old('phone', $party?->phone)" />
         <x-input-error :messages="$errors->get('phone')" class="mt-2" />
+    </div>
+
+    <div>
+        <x-input-label for="document_language" value="Langue des factures" />
+        <select id="document_language" name="document_language" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            @foreach (DocumentLanguage::cases() as $language)
+                <option value="{{ $language->value }}" @selected(old('document_language', $party?->document_language?->value ?? DocumentLanguage::French->value) === $language->value)>{{ $language->label() }}</option>
+            @endforeach
+        </select>
+        <x-input-error :messages="$errors->get('document_language')" class="mt-2" />
     </div>
 
     <div class="flex items-center pt-7">

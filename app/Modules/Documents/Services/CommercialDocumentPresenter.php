@@ -6,6 +6,7 @@ use App\Models\CompanySetting;
 use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Models\Quote;
+use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Quotes\Enums\QuoteStatus;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -33,8 +34,9 @@ class CommercialDocumentPresenter
     /**
      * Data shared by every rendering of a commercial document.
      */
-    public function present(Quote|Invoice|CreditNote $document): array
+    public function present(Quote|Invoice|CreditNote $document, DocumentLanguage $language = DocumentLanguage::French): array
     {
+        $locale = $language->value;
         $document->loadMissing(['party', 'lines', 'creator']);
         $verifiable = $this->isVerifiable($document);
         $verificationUrl = $verifiable ? $this->verificationUrl($document) : null;
@@ -44,9 +46,13 @@ class CommercialDocumentPresenter
             'fingerprint' => $verifiable ? $this->fingerprint($document) : null,
             'verificationUrl' => $verificationUrl,
             'qrCode' => $verificationUrl ? $this->qrCode($verificationUrl) : null,
-            'amountInWords' => $this->amountInWords((float) $document->total, $document->currency),
+            'amountInWords' => $this->amountInWords((float) $document->total, $document->currency, $locale),
+            'netPayableInWords' => $this->hasDeductions($document)
+                ? $this->amountInWords($document->netPayable(), $document->currency, $locale)
+                : null,
             'taxBreakdown' => $this->taxBreakdown($document),
-            'watermark' => $this->watermark($document),
+            'watermark' => $this->watermark($document, $locale),
+            'locale' => $locale,
         ];
     }
 
@@ -88,6 +94,9 @@ class CommercialDocumentPresenter
     public function fingerprint(Quote|Invoice|CreditNote $document): string
     {
         $document->loadMissing(['party', 'lines']);
+        if ($document instanceof Invoice) {
+            $document->loadMissing('deductions');
+        }
 
         $payload = [
             'type' => $this->typeOf($document),
@@ -109,6 +118,19 @@ class CommercialDocumentPresenter
                 number_format((float) $line->total, 2, '.', ''),
             ])->all(),
         ];
+
+        // Added only when present so that fingerprints already printed on
+        // invoices without deductions stay valid.
+        if ($this->hasDeductions($document)) {
+            $payload['deductions'] = $document->deductions->map(fn ($deduction) => [
+                $deduction->position,
+                $deduction->type->value,
+                $deduction->description,
+                number_format((float) $deduction->quantity, 3, '.', ''),
+                number_format((float) $deduction->unit_price, 4, '.', ''),
+                number_format((float) $deduction->amount, 2, '.', ''),
+            ])->all();
+        }
 
         $hash = strtoupper(substr(hash('sha256', json_encode($payload)), 0, 16));
 
@@ -136,25 +158,31 @@ class CommercialDocumentPresenter
         return substr(hash_hmac('sha256', $type.'|'.$id, config('app.key')), 0, 20);
     }
 
-    public function amountInWords(float $amount, string $currency): string
+    public function amountInWords(float $amount, string $currency, string $locale = 'fr'): string
     {
-        [$major, $minor] = match ($currency) {
-            'USD' => ['dollar américain', 'cent'],
-            'EUR' => ['euro', 'centime'],
-            'XAF', 'XOF' => ['franc CFA', 'centime'],
+        $english = $locale === DocumentLanguage::English->value;
+        [$major, $minor] = match (true) {
+            $english && $currency === 'USD' => ['US dollar', 'cent'],
+            $english && $currency === 'EUR' => ['euro', 'cent'],
+            $english && in_array($currency, ['XAF', 'XOF'], true) => ['CFA franc', 'centime'],
+            $english => ['Congolese franc', 'centime'],
+            $currency === 'USD' => ['dollar américain', 'cent'],
+            $currency === 'EUR' => ['euro', 'centime'],
+            in_array($currency, ['XAF', 'XOF'], true) => ['franc CFA', 'centime'],
             default => ['franc congolais', 'centime'],
         };
 
-        $formatter = new NumberFormatter('fr', NumberFormatter::SPELLOUT);
+        $formatter = new NumberFormatter($english ? 'en' : 'fr', NumberFormatter::SPELLOUT);
         $units = (int) floor(round($amount, 2));
         $cents = (int) round(($amount - $units) * 100);
 
         $words = $formatter->format($units);
         // « un million de francs », « deux milliards de dollars »
-        $words .= preg_match('/(million|milliard)s?$/', $words) ? ' de ' : ' ';
-        $words .= $this->plural($major, $units);
+        $words .= ! $english && preg_match('/(million|milliard)s?$/', $words) ? ' de ' : ' ';
+        $words .= $english ? $this->englishPlural($major, $units) : $this->plural($major, $units);
         if ($cents > 0) {
-            $words .= ' et '.$formatter->format($cents).' '.$this->plural($minor, $cents);
+            $words .= ($english ? ' and ' : ' et ').$formatter->format($cents).' ';
+            $words .= $english ? $this->englishPlural($minor, $cents) : $this->plural($minor, $cents);
         }
 
         return ucfirst($words);
@@ -179,16 +207,23 @@ class CommercialDocumentPresenter
             ->all();
     }
 
-    public function watermark(Model $document): ?string
+    public function hasDeductions(Model $document): bool
     {
-        return match (true) {
-            $document instanceof Invoice && $document->status === InvoiceStatus::Draft => 'Brouillon',
-            $document instanceof Invoice && $document->status === InvoiceStatus::Cancelled => 'Annulée',
-            $document instanceof Quote && $document->status === QuoteStatus::Draft => 'Brouillon',
-            $document instanceof Quote && $document->status === QuoteStatus::Cancelled => 'Annulé',
-            $document instanceof Quote && $document->status === QuoteStatus::Rejected => 'Refusé',
+        return $document instanceof Invoice && (float) $document->deductions_total > 0;
+    }
+
+    public function watermark(Model $document, string $locale = 'fr'): ?string
+    {
+        $key = match (true) {
+            $document instanceof Invoice && $document->status === InvoiceStatus::Draft => 'invoice_draft',
+            $document instanceof Invoice && $document->status === InvoiceStatus::Cancelled => 'invoice_cancelled',
+            $document instanceof Quote && $document->status === QuoteStatus::Draft => 'quote_draft',
+            $document instanceof Quote && $document->status === QuoteStatus::Cancelled => 'quote_cancelled',
+            $document instanceof Quote && $document->status === QuoteStatus::Rejected => 'quote_rejected',
             default => null,
         };
+
+        return $key ? __("document.watermark.{$key}", [], $locale) : null;
     }
 
     private function qrCode(string $data): string
@@ -203,6 +238,14 @@ class CommercialDocumentPresenter
         ]);
 
         return (new QRCode($options))->render($data);
+    }
+
+    /**
+     * Only the noun takes the plural: « US dollars », « CFA francs ».
+     */
+    private function englishPlural(string $words, int $count): string
+    {
+        return $count === 1 ? $words : $words.'s';
     }
 
     private function plural(string $words, int $count): string

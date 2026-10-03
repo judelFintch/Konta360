@@ -53,6 +53,15 @@ class Quote extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * A quote still awaiting an answer after its validity date.
+     */
+    public function isExpired(): bool
+    {
+        return in_array($this->status, [QuoteStatus::Draft, QuoteStatus::Sent], true)
+            && $this->valid_until->lt(today());
+    }
+
     public function invoice(): HasOne
     {
         return $this->hasOne(Invoice::class);

@@ -6,6 +6,7 @@ use App\Models\Quote;
 use App\Models\User;
 use App\Modules\Administration\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Administration\Enums\Role;
+use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Parties\Enums\PartyType;
 use App\Modules\Quotes\Enums\QuoteStatus;
@@ -118,4 +119,25 @@ it('protects print and pdf routes with view permissions', function () {
     $this->actingAs($userWithoutRole)->get(route('quotes.pdf', $this->quote))->assertForbidden();
     $this->actingAs($userWithoutRole)->get(route('invoices.print', $this->invoice))->assertForbidden();
     $this->actingAs($userWithoutRole)->get(route('invoices.pdf', $this->invoice))->assertForbidden();
+});
+
+it('shows the quote page with its sales steps and control code', function () {
+    $this->actingAs($this->user)
+        ->get(route('quotes.show', $this->quote))
+        ->assertOk()
+        ->assertSee('Montant du devis')
+        ->assertSee('Envoyé au client')
+        ->assertSee(app(CommercialDocumentPresenter::class)->fingerprint($this->quote))
+        ->assertSee('Voir la facture');
+});
+
+it('flags expired quotes and summarises quotes by currency', function () {
+    $this->quote->invoice()->delete();
+    $this->quote->update(['valid_until' => today()->subDays(3)]);
+
+    $this->actingAs($this->user)
+        ->get(route('quotes.index'))
+        ->assertOk()
+        ->assertSee('Expiré')
+        ->assertSeeInOrder(['Expirés', '116,00', '1 devis à relancer']);
 });

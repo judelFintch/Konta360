@@ -41,7 +41,17 @@ class QuoteController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('quotes.index', compact('quotes', 'search', 'status'));
+        $open = Quote::query()->whereIn('status', [QuoteStatus::Draft, QuoteStatus::Sent, QuoteStatus::Accepted])->get();
+        $summary = $open->groupBy('currency')->map(fn ($quotes) => [
+            'draft' => round((float) $quotes->where('status', QuoteStatus::Draft)->sum('total'), 2),
+            'pending' => round((float) $quotes->where('status', QuoteStatus::Sent)->reject->isExpired()->sum('total'), 2),
+            'accepted' => round((float) $quotes->where('status', QuoteStatus::Accepted)->sum('total'), 2),
+            'expired' => round((float) $quotes->filter->isExpired()->sum('total'), 2),
+            'expired_count' => $quotes->filter->isExpired()->count(),
+        ]);
+        $counts = Quote::query()->toBase()->selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status');
+
+        return view('quotes.index', compact('quotes', 'search', 'status', 'summary', 'counts'));
     }
 
     public function create(): View
@@ -77,8 +87,13 @@ class QuoteController extends Controller
     {
         $this->requirePermission(Permission::QuotesView);
         $quote->load(['party', 'lines', 'creator', 'invoice']);
+        $presenter = app(CommercialDocumentPresenter::class);
 
-        return view('quotes.show', compact('quote'));
+        return view('quotes.show', [
+            'quote' => $quote,
+            'fingerprint' => $presenter->fingerprint($quote),
+            'verificationUrl' => $presenter->verificationUrl($quote),
+        ]);
     }
 
     public function print(Quote $quote): View

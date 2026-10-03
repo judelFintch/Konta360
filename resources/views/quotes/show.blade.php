@@ -1,98 +1,145 @@
-@php use App\Modules\Administration\Enums\Permission; use App\Modules\Quotes\Enums\QuoteStatus; @endphp
+@php
+    use App\Modules\Administration\Enums\Permission;
+    use App\Modules\Quotes\Enums\QuoteStatus;
+
+    $money = fn ($value) => number_format((float) $value, 2, ',', ' ');
+    $isDraft = $quote->status === QuoteStatus::Draft;
+    $convertible = in_array($quote->status, [QuoteStatus::Draft, QuoteStatus::Sent, QuoteStatus::Accepted], true);
+    $daysLeft = (int) today()->diffInDays($quote->valid_until, false);
+@endphp
 
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-                <p class="text-sm font-medium text-indigo-600">Devis</p>
-                <h1 class="text-2xl font-semibold text-gray-900">{{ $quote->number }}</h1>
-                <p class="mt-1 text-sm text-gray-500">Imprimez ou envoyez ce devis au client, puis convertissez-le en facture une fois accepté.</p>
+                <a href="{{ route('quotes.index') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500" wire:navigate>← Devis</a>
+                <div class="mt-1 flex flex-wrap items-center gap-3">
+                    <h1 class="text-2xl font-semibold text-gray-900">{{ $quote->number }}</h1>
+                    @include('quotes._status')
+                </div>
+                <p class="mt-1 text-sm text-gray-500">{{ $quote->party->name }} · émis le {{ $quote->issue_date->format('d/m/Y') }}</p>
             </div>
-            <div class="flex gap-3">
-                <a href="{{ route('quotes.print', $quote) }}" target="_blank" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Imprimer</a>
-                <a href="{{ route('quotes.pdf', $quote) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">PDF</a>
-                @if ($quote->status === QuoteStatus::Draft)
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('quotes.print', $quote) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M6 14h12v7H6v-7Z"/></svg>
+                    Aperçu / Imprimer
+                </a>
+                <a href="{{ route('quotes.pdf', $quote) }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-4-4m4 4 4-4M4 20h16"/></svg>
+                    PDF
+                </a>
+                @if ($isDraft)
                     @can(Permission::QuotesCreate->value)
-                        <a href="{{ route('quotes.edit', $quote) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Modifier</a>
-                        <form method="POST" action="{{ route('quotes.send', $quote) }}">
-                            @csrf @method('PATCH')
-                            <button class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Marquer comme envoyé</button>
-                        </form>
+                        <a href="{{ route('quotes.edit', $quote) }}" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50" wire:navigate>Modifier</a>
                     @endcan
-                @endif
-                @if (in_array($quote->status, [QuoteStatus::Draft, QuoteStatus::Sent, QuoteStatus::Accepted], true))
-                    @if ($quote->invoice)
-                        @can(Permission::InvoicesView->value)
-                            <a href="{{ route('invoices.show', $quote->invoice) }}" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Voir la facture</a>
-                        @endcan
-                    @else
-                        @can(Permission::QuotesConvert->value)
-                            @can(Permission::InvoicesCreate->value)
-                                <form method="POST" action="{{ route('quotes.invoice', $quote) }}">
-                                    @csrf
-                                    <button class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
-                                            onclick="return confirm('Créer une facture brouillon à partir de ce devis ?')">
-                                        Convertir en facture
-                                    </button>
-                                </form>
-                            @endcan
-                        @endcan
-                    @endif
                 @endif
             </div>
         </div>
     </x-slot>
 
-    <div class="py-10">
-        <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-            @if (session('success'))<div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>@endif
+    <div class="py-8">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            @if (session('success'))
+                <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
+            @endif
+            @if ($quote->isExpired())
+                <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    Ce devis a expiré le {{ $quote->valid_until->format('d/m/Y') }}. Relancez le client ou établissez un nouveau devis avec des conditions à jour.
+                </div>
+            @endif
 
-            <article class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-10">
-                <div class="grid gap-6 border-b border-gray-200 pb-8 sm:grid-cols-2">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Client</p>
-                        <p class="mt-2 text-lg font-semibold text-gray-900">{{ $quote->party->name }}</p>
-                        <p class="mt-1 whitespace-pre-line text-sm text-gray-600">{{ $quote->party->address }}</p>
-                    </div>
-                    <dl class="grid grid-cols-2 gap-4 text-sm sm:text-right">
-                        <div><dt class="text-gray-500">Statut</dt><dd class="mt-1 font-semibold text-gray-900">{{ $quote->status->label() }}</dd></div>
-                        <div><dt class="text-gray-500">Devise</dt><dd class="mt-1 font-semibold text-gray-900">{{ $quote->currency }}</dd></div>
-                        <div><dt class="text-gray-500">Émis le</dt><dd class="mt-1 font-semibold text-gray-900">{{ $quote->issue_date->format('d/m/Y') }}</dd></div>
-                        <div><dt class="text-gray-500">Valable au</dt><dd class="mt-1 font-semibold text-gray-900">{{ $quote->valid_until->format('d/m/Y') }}</dd></div>
-                    </dl>
+            <div class="grid gap-6 lg:grid-cols-3">
+                <div class="lg:col-span-2">
+                    @include('documents._document-card', [
+                        'document' => $quote,
+                        'meta' => [
+                            ['Date d’émission', $quote->issue_date->format('d/m/Y'), null, false],
+                            ['Valable jusqu’au', $quote->valid_until->format('d/m/Y'), null, $quote->isExpired()],
+                            ['Devise', $quote->currency, null, false],
+                            ['Facture', $quote->invoice ? ($quote->invoice->number ?: 'Brouillon #'.$quote->invoice->id) : '—', $quote->invoice ? route('invoices.show', $quote->invoice) : null, false],
+                        ],
+                    ])
                 </div>
 
-                <div class="mt-8 overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead><tr class="border-b text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                            <th class="py-3">Article</th><th class="py-3 text-right">Qté</th><th class="py-3 text-right">Prix HT</th>
-                            <th class="py-3 text-right">Remise</th><th class="py-3 text-right">Taxe</th><th class="py-3 text-right">Total TTC</th>
-                        </tr></thead>
-                        <tbody class="divide-y divide-gray-100">
-                            @foreach ($quote->lines as $line)
-                                <tr class="text-sm">
-                                    <td class="py-4"><p class="font-medium text-gray-900">{{ $line->description }}</p><p class="text-gray-500">{{ $line->sku }} · {{ $line->unit }}</p></td>
-                                    <td class="py-4 text-right text-gray-700">{{ number_format((float) $line->quantity, 3, ',', ' ') }}</td>
-                                    <td class="py-4 text-right text-gray-700">{{ number_format((float) $line->unit_price, 2, ',', ' ') }}</td>
-                                    <td class="py-4 text-right text-gray-700">{{ number_format((float) $line->discount_rate, 2, ',', ' ') }} %</td>
-                                    <td class="py-4 text-right text-gray-700">{{ number_format((float) $line->tax_amount, 2, ',', ' ') }}</td>
-                                    <td class="py-4 text-right font-semibold text-gray-900">{{ number_format((float) $line->total, 2, ',', ' ') }}</td>
-                                </tr>
+                <aside class="space-y-6">
+                    {{-- Étape du cycle de vente et actions --}}
+                    <article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+                        <p class="text-sm font-medium text-gray-500">Montant du devis</p>
+                        <p class="mt-1 text-3xl font-semibold text-gray-900">{{ $money($quote->total) }} <span class="text-base font-medium text-gray-400">{{ $quote->currency }}</span></p>
+                        @if ($convertible && ! $quote->invoice)
+                            <p class="mt-1 text-sm {{ $quote->isExpired() ? 'font-medium text-red-600' : 'text-gray-500' }}">
+                                {{ $quote->isExpired() ? 'Expiré depuis '.abs($daysLeft).' jour(s)' : ($daysLeft === 0 ? 'Valable jusqu’à aujourd’hui' : 'Encore valable '.$daysLeft.' jour(s)') }}
+                            </p>
+                        @endif
+
+                        {{-- Étapes : brouillon → envoyé → facturé --}}
+                        @php
+                            $steps = [
+                                ['Brouillon', true],
+                                ['Envoyé au client', $quote->status !== QuoteStatus::Draft],
+                                ['Facturé', (bool) $quote->invoice],
+                            ];
+                        @endphp
+                        <ol class="mt-5 space-y-3 border-t border-gray-100 pt-4">
+                            @foreach ($steps as [$label, $done])
+                                <li class="flex items-center gap-3 text-sm">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full {{ $done ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400' }}">
+                                        @if ($done)
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+                                        @else
+                                            {{ $loop->iteration }}
+                                        @endif
+                                    </span>
+                                    <span class="{{ $done ? 'font-medium text-gray-900' : 'text-gray-500' }}">{{ $label }}</span>
+                                </li>
                             @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        </ol>
 
-                <div class="mt-8 flex justify-end">
-                    <dl class="w-full max-w-sm space-y-3 text-sm">
-                        <div class="flex justify-between"><dt class="text-gray-500">Sous-total HT</dt><dd class="font-medium">{{ number_format((float) $quote->subtotal, 2, ',', ' ') }} {{ $quote->currency }}</dd></div>
-                        <div class="flex justify-between"><dt class="text-gray-500">Remises</dt><dd class="font-medium">− {{ number_format((float) $quote->discount_total, 2, ',', ' ') }} {{ $quote->currency }}</dd></div>
-                        <div class="flex justify-between"><dt class="text-gray-500">Taxes</dt><dd class="font-medium">{{ number_format((float) $quote->tax_total, 2, ',', ' ') }} {{ $quote->currency }}</dd></div>
-                        <div class="flex justify-between border-t pt-4 text-lg font-semibold"><dt>Total TTC</dt><dd>{{ number_format((float) $quote->total, 2, ',', ' ') }} {{ $quote->currency }}</dd></div>
-                    </dl>
-                </div>
-                @if ($quote->notes)<div class="mt-8 rounded-lg bg-gray-50 p-4"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</p><p class="mt-2 whitespace-pre-line text-sm text-gray-700">{{ $quote->notes }}</p></div>@endif
-            </article>
+                        <div class="mt-5 space-y-2">
+                            @if ($isDraft)
+                                @can(Permission::QuotesCreate->value)
+                                    <form method="POST" action="{{ route('quotes.send', $quote) }}">
+                                        @csrf @method('PATCH')
+                                        <button class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Marquer comme envoyé</button>
+                                    </form>
+                                @endcan
+                            @endif
+                            @if ($convertible)
+                                @if ($quote->invoice)
+                                    @can(Permission::InvoicesView->value)
+                                        <a href="{{ route('invoices.show', $quote->invoice) }}" class="block w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-emerald-500" wire:navigate>Voir la facture</a>
+                                    @endcan
+                                @else
+                                    @can(Permission::QuotesConvert->value)
+                                        @can(Permission::InvoicesCreate->value)
+                                            <form method="POST" action="{{ route('quotes.invoice', $quote) }}">
+                                                @csrf
+                                                <button class="w-full rounded-lg {{ $isDraft ? 'border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100' : 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-500' }} px-4 py-2.5 text-sm font-semibold"
+                                                        onclick="return confirm('Le client a accepté ? Une facture brouillon sera créée à partir de ce devis.')">
+                                                    Convertir en facture
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    @endcan
+                                @endif
+                            @endif
+                        </div>
+                    </article>
+
+                    @include('documents._party-card', ['party' => $quote->party])
+
+                    @include('documents._control-card')
+
+                    <article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+                        <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Suivi</p>
+                        <dl class="mt-3 space-y-2 text-sm">
+                            <div class="flex justify-between gap-4"><dt class="text-gray-500">Créé le</dt><dd class="text-gray-900">{{ $quote->created_at->format('d/m/Y') }}</dd></div>
+                            @if ($quote->creator)<div class="flex justify-between gap-4"><dt class="text-gray-500">Par</dt><dd class="text-right text-gray-900">{{ $quote->creator->name }}</dd></div>@endif
+                            @if ($quote->invoice)<div class="flex justify-between gap-4"><dt class="text-gray-500">Facturé le</dt><dd class="text-gray-900">{{ $quote->invoice->created_at->format('d/m/Y') }}</dd></div>@endif
+                        </dl>
+                    </article>
+                </aside>
+            </div>
         </div>
     </div>
 </x-app-layout>

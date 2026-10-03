@@ -35,7 +35,13 @@ class CreditNoteController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('credit-notes.index', compact('creditNotes', 'search'));
+        $summary = CreditNote::query()->get()->groupBy('currency')->map(fn ($notes) => [
+            'total' => round((float) $notes->sum('total'), 2),
+            'month' => round((float) $notes->filter(fn (CreditNote $note) => $note->issue_date->gte(today()->startOfMonth()))->sum('total'), 2),
+            'count' => $notes->count(),
+        ]);
+
+        return view('credit-notes.index', compact('creditNotes', 'search', 'summary'));
     }
 
     public function create(Invoice $invoice): View
@@ -127,8 +133,13 @@ class CreditNoteController extends Controller
     {
         $this->requireViewPermission();
         $creditNote->load(['party', 'invoice', 'lines', 'creator']);
+        $presenter = app(CommercialDocumentPresenter::class);
 
-        return view('credit-notes.show', compact('creditNote'));
+        return view('credit-notes.show', [
+            'creditNote' => $creditNote,
+            'fingerprint' => $presenter->fingerprint($creditNote),
+            'verificationUrl' => $presenter->verificationUrl($creditNote),
+        ]);
     }
 
     public function print(CreditNote $creditNote): View

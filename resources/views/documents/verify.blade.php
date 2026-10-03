@@ -38,6 +38,10 @@
                 <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Client</dt><dd class="text-right">{{ $document->party->name }}</dd></div>
                 <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Nombre de lignes</dt><dd>{{ $document->lines->count() }}</dd></div>
                 <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Montant TTC</dt><dd class="font-semibold">{{ number_format((float) $document->total, 2, ',', ' ') }} {{ $document->currency }}</dd></div>
+                @if($document instanceof \App\Models\Invoice && (float) $document->deductions_total > 0)
+                    <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Déductions (avance, frais)</dt><dd>− {{ number_format((float) $document->deductions_total, 2, ',', ' ') }}</dd></div>
+                    <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Net à payer</dt><dd class="font-semibold">{{ number_format($document->netPayable(), 2, ',', ' ') }} {{ $document->currency }}</dd></div>
+                @endif
                 @if(! is_null($balanceDue) && ! $cancelled)
                     <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Situation</dt><dd>{{ $document->paymentLabel() }}</dd></div>
                 @endif

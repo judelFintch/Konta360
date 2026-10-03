@@ -229,6 +229,35 @@
             </tbody>
         </table>
 
+        @if ($netPayableInWords ?? null)
+            <!-- Déductions : avance reçue et frais supportés par le client -->
+            <table class="lines">
+                <thead>
+                    <tr>
+                        <th style="width: 4%">N°</th>
+                        <th style="width: 52%">Déductions</th>
+                        <th class="num">Qté</th>
+                        <th class="num">P.U.</th>
+                        <th class="num">Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($document->deductions as $deduction)
+                        <tr>
+                            <td class="muted">{{ $loop->iteration }}</td>
+                            <td>
+                                <span class="strong">{{ $deduction->description }}</span><br>
+                                <span class="sku">{{ $deduction->type->label() }}@if ($deduction->received_on) · reçue le {{ $deduction->received_on->format('d/m/Y') }}@endif</span>
+                            </td>
+                            <td class="num">{{ rtrim(rtrim(number_format((float) $deduction->quantity, 3, ',', ' '), '0'), ',') }}</td>
+                            <td class="num">{{ rtrim(rtrim(number_format((float) $deduction->unit_price, 4, ',', ' '), '0'), ',') }}</td>
+                            <td class="num strong">{{ $money($deduction->amount) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
         <!-- Récapitulatif TVA, montant en lettres et totaux -->
         <table class="summary">
             <tr>
@@ -244,6 +273,10 @@
                     <div class="words">
                         <div class="label">{{ match (true) { $isQuote => 'Le présent devis s’élève à la somme de', $document instanceof \App\Models\CreditNote => 'Arrêté le présent avoir à la somme de', default => 'Arrêtée la présente facture à la somme de' } }}</div>
                         <span class="strong">{{ $amountInWords }}</span>&nbsp;TTC.
+                        @if ($netPayableInWords ?? null)
+                            <div class="label" style="margin-top: 6px">Soit, après déductions, un net à payer de</div>
+                            <span class="strong">{{ $netPayableInWords }}</span>.
+                        @endif
                     </div>
                 </td>
                 <td>
@@ -255,10 +288,15 @@
                         <tr><td class="muted">Total net HT</td><td>{{ $money($netTotal) }}</td></tr>
                         <tr><td class="muted">Total TVA</td><td>{{ $money($document->tax_total) }}</td></tr>
                         <tr class="grand"><td>Total TTC</td><td>{{ $money($document->total) }} {{ $document->currency }}</td></tr>
-                        @if ($settlement ?? null)
+                        @if ($netPayableInWords ?? null)
+                            <tr><td class="muted">Total déductions</td><td>− {{ $money($document->deductions_total) }}</td></tr>
+                            <tr class="due"><td>Net à payer</td><td>{{ $money($document->netPayable()) }} {{ $document->currency }}</td></tr>
+                        @endif
+                        {{-- Après déductions, le reste à payer n’apporte rien tant que rien d’autre n’est réglé. --}}
+                        @if (($settlement ?? null) && (! ($netPayableInWords ?? null) || $settlement['credited'] > 0 || $settlement['paid'] > 0))
                             @if ($settlement['credited'] > 0)<tr><td class="muted">Avoirs imputés</td><td>− {{ $money($settlement['credited']) }}</td></tr>@endif
                             @if ($settlement['paid'] > 0)<tr><td class="muted">Règlements reçus</td><td>− {{ $money($settlement['paid']) }}</td></tr>@endif
-                            <tr class="due"><td>Net à payer</td><td>{{ $money($settlement['balance']) }} {{ $document->currency }}</td></tr>
+                            <tr class="due"><td>{{ ($netPayableInWords ?? null) ? 'Reste à payer' : 'Net à payer' }}</td><td>{{ $money($settlement['balance']) }} {{ $document->currency }}</td></tr>
                         @endif
                     </table>
                 </td>

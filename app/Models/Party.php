@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Modules\Parties\Enums\PartyType;
+use App\Modules\Documents\Enums\DocumentLanguage;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
     'email',
     'phone',
     'address',
+    'document_language',
     'is_active',
 ])]
 class Party extends Model
@@ -25,6 +27,7 @@ class Party extends Model
         return [
             'type' => PartyType::class,
             'is_active' => 'boolean',
+            'document_language' => DocumentLanguage::class,
         ];
     }
 }

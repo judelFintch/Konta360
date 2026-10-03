@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Parties\Enums\PartyType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,6 +28,7 @@ class PartyRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],
             'address' => ['nullable', 'string', 'max:2000'],
+            'document_language' => ['sometimes', 'required', Rule::enum(DocumentLanguage::class)],
             'is_active' => ['required', 'boolean'],
         ];
     }

@@ -133,3 +133,57 @@ it('allows accounting readers to inspect entries and forbids commercial users', 
     $commercial->assignRole(Role::Commercial->value);
     $this->actingAs($commercial)->get(route('accounting.entries.index'))->assertForbidden();
 });
+
+it('reverses the sales entry when a validated invoice is cancelled', function () {
+    $this->actingAs($this->user)->patch(route('invoices.validate', $this->invoice));
+
+    $this->actingAs($this->user)
+        ->patch(route('invoices.cancel', $this->invoice))
+        ->assertSessionHas('success');
+
+    $reversal = AccountingEntry::with('lines.account')->where('source_type', 'invoice_reversal')->firstOrFail();
+    $receivable = $reversal->lines->firstWhere('account.code', '411');
+
+    expect($this->invoice->refresh()->status)->toBe(InvoiceStatus::Cancelled)
+        ->and((float) $receivable->credit)->toBe(1044.0)
+        ->and((float) $reversal->lines->sum('debit'))->toBe((float) $reversal->lines->sum('credit'));
+});
+
+it('refuses to cancel an invoice that has recorded payments', function () {
+    $this->actingAs($this->user)->patch(route('invoices.validate', $this->invoice));
+    Payment::create([
+        'invoice_id' => $this->invoice->id, 'number' => 'REG-TEST-1', 'payment_date' => today(),
+        'amount' => 100, 'currency' => 'USD', 'method' => PaymentMethod::BankTransfer,
+        'status' => PaymentStatus::Recorded, 'recorded_by' => $this->user->id,
+    ]);
+
+    $this->actingAs($this->user)
+        ->patch(route('invoices.cancel', $this->invoice))
+        ->assertSessionHas('error');
+
+    expect($this->invoice->refresh()->status)->toBe(InvoiceStatus::Validated)
+        ->and(AccountingEntry::where('source_type', 'invoice_reversal')->exists())->toBeFalse();
+});
+
+it('allows cancelling once the payments have been reversed', function () {
+    $this->actingAs($this->user)->patch(route('invoices.validate', $this->invoice));
+    Payment::create([
+        'invoice_id' => $this->invoice->id, 'number' => 'REG-TEST-2', 'payment_date' => today(),
+        'amount' => 100, 'currency' => 'USD', 'method' => PaymentMethod::BankTransfer,
+        'status' => PaymentStatus::Reversed, 'recorded_by' => $this->user->id,
+    ]);
+
+    $this->actingAs($this->user)
+        ->patch(route('invoices.cancel', $this->invoice))
+        ->assertSessionHas('success');
+
+    expect($this->invoice->refresh()->status)->toBe(InvoiceStatus::Cancelled);
+});
+
+it('cancels a draft invoice without any accounting entry', function () {
+    $this->actingAs($this->user)
+        ->patch(route('invoices.cancel', $this->invoice))
+        ->assertSessionHas('success');
+
+    expect(AccountingEntry::count())->toBe(0);
+});

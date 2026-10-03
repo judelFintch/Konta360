@@ -15,6 +15,7 @@ use App\Models\Payment;
 use App\Models\TreasuryTransaction;
 use App\Modules\Accounting\Enums\EntryStatus;
 use App\Modules\Accounting\Enums\PeriodStatus;
+use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Payments\Enums\PaymentMethod;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
 use LogicException;
@@ -32,6 +33,15 @@ class AccountingService
 
         if ((float) $invoice->tax_total > 0) {
             $lines[] = $this->line('4431', "Taxes {$invoice->number}", 0, (float) $invoice->tax_total);
+        }
+
+        // Costs the customer paid on our behalf are offset against the
+        // receivable in the same entry, so cancelling the invoice reverses
+        // them too. Provisional account pending the chart of accounts.
+        $offsets = $invoice->deductions()->where('type', DeductionType::ClientExpense)->get();
+        foreach ($offsets as $offset) {
+            $lines[] = $this->line('60', "{$offset->description} — {$invoice->number}", (float) $offset->amount, 0);
+            $lines[] = $this->line('411', "Compensation {$invoice->number}", 0, (float) $offset->amount);
         }
 
         return $this->post(
@@ -157,6 +167,41 @@ class AccountingService
             now()->format('Y-m-d'),
             "Annulation du règlement {$payment->number}",
             $payment->currency,
+            $lines,
+            $userId
+        );
+    }
+
+    /**
+     * Mirror entry of a cancelled invoice's sales entry, dated on the day of
+     * the cancellation so that closed periods stay untouched.
+     */
+    public function reverseInvoice(Invoice $invoice, int $userId): ?AccountingEntry
+    {
+        $original = AccountingEntry::query()
+            ->with(['lines.account', 'journal'])
+            ->where('source_type', 'invoice')
+            ->where('source_id', $invoice->id)
+            ->first();
+
+        if (! $original) {
+            return null;
+        }
+
+        $lines = $original->lines->map(fn ($line) => [
+            'account_code' => $line->account->code,
+            'description' => "Contre-passation {$invoice->number}",
+            'debit' => (float) $line->credit,
+            'credit' => (float) $line->debit,
+        ])->all();
+
+        return $this->post(
+            'invoice_reversal',
+            $invoice->id,
+            $original->journal->code,
+            now()->format('Y-m-d'),
+            "Annulation de la facture {$invoice->number}",
+            $invoice->currency,
             $lines,
             $userId
         );

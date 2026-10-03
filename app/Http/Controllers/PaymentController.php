@@ -11,6 +11,7 @@ use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Payments\Enums\PaymentStatus;
+use App\Modules\Payments\Services\PaymentRecorder;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,61 +56,23 @@ class PaymentController extends Controller
         return view('payments.create', compact('invoice', 'treasuryAccounts'));
     }
 
-    public function store(PaymentRequest $request, Invoice $invoice, AccountingService $accounting): RedirectResponse
+    public function store(PaymentRequest $request, Invoice $invoice, PaymentRecorder $recorder): RedirectResponse
     {
         $this->requirePermission(Permission::PaymentsRecord);
         $data = $request->validated();
 
-        DB::transaction(function () use ($invoice, $data, $accounting) {
+        DB::transaction(function () use ($invoice, $data, $recorder) {
             $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
             $this->ensurePayable($invoice);
             $balance = $invoice->balanceDue();
-            $amount = round((float) $data['amount'], 2);
-            $treasuryAccount = null;
 
-            if (TreasuryAccount::query()->where('is_active', true)->where('currency', $invoice->currency)->exists()) {
-                if (empty($data['treasury_account_id'])) {
-                    throw ValidationException::withMessages(['treasury_account_id' => 'Sélectionnez le compte qui reçoit le règlement.']);
-                }
-                $treasuryAccount = TreasuryAccount::query()->lockForUpdate()->findOrFail($data['treasury_account_id']);
-                if (! $treasuryAccount->is_active || $treasuryAccount->currency !== $invoice->currency) {
-                    throw ValidationException::withMessages(['treasury_account_id' => 'Ce compte de trésorerie ne peut pas recevoir ce règlement.']);
-                }
-            }
-
-            if ($amount > $balance) {
+            if (round((float) $data['amount'], 2) > $balance) {
                 throw ValidationException::withMessages([
                     'amount' => 'Le montant ne peut pas dépasser le solde de '.number_format($balance, 2, ',', ' ').' '.$invoice->currency.'.',
                 ]);
             }
 
-            $payment = Payment::create([
-                ...$data,
-                'invoice_id' => $invoice->id,
-                'amount' => $amount,
-                'currency' => $invoice->currency,
-                'status' => PaymentStatus::Recorded,
-                'recorded_by' => auth()->id(),
-            ]);
-            $payment->update([
-                'number' => sprintf('REG-%s-%05d', $payment->payment_date->format('Y'), $payment->id),
-            ]);
-            $accounting->postPayment($payment, auth()->id());
-            if ($treasuryAccount) {
-                $movement = TreasuryTransaction::create([
-                    'treasury_account_id' => $treasuryAccount->id,
-                    'type' => TreasuryTransactionType::Inflow,
-                    'transaction_date' => $payment->payment_date,
-                    'amount' => $payment->amount,
-                    'currency' => $payment->currency,
-                    'description' => "Règlement {$payment->number} — {$invoice->number}",
-                    'reference' => $payment->reference,
-                    'source_type' => 'payment',
-                    'source_id' => $payment->id,
-                    'created_by' => auth()->id(),
-                ]);
-                $movement->update(['number' => sprintf('TRES-%s-%05d', $movement->transaction_date->format('Y'), $movement->id)]);
-            }
+            $recorder->record($invoice, $data, auth()->id());
         });
 
         return to_route('invoices.show', $invoice)->with('success', 'Le règlement a été enregistré.');

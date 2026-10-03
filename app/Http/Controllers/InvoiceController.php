@@ -5,16 +5,21 @@ namespace App\Http\Controllers;
 use App\Http\Requests\InvoiceDraftRequest;
 use App\Models\CompanySetting;
 use App\Models\Invoice;
+use App\Models\InvoiceDeduction;
 use App\Models\Quote;
+use App\Models\TreasuryAccount;
 use App\Models\User;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
+use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Invoices\Enums\InvoiceStatus;
+use App\Modules\Payments\Services\PaymentRecorder;
 use App\Modules\Quotes\Enums\QuoteStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -27,7 +32,7 @@ class InvoiceController extends Controller
         $status = $request->query('status');
 
         $invoices = Invoice::query()
-            ->with(['party', 'recordedPayments', 'creditNotes'])
+            ->with(['party', 'recordedPayments', 'creditNotes', 'deductions'])
             ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('number', 'like', "%{$search}%")
                     ->orWhereHas('party', fn ($query) => $query->where('name', 'like', "%{$search}%"));
@@ -43,7 +48,7 @@ class InvoiceController extends Controller
 
         $validated = Invoice::query()
             ->where('status', InvoiceStatus::Validated)
-            ->with(['recordedPayments', 'creditNotes'])
+            ->with(['recordedPayments', 'creditNotes', 'deductions'])
             ->get();
         $summary = $validated->groupBy('currency')->map(fn ($invoices) => [
             'invoiced' => round((float) $invoices->sum('total'), 2),
@@ -60,7 +65,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): View
     {
         $this->requirePermission(Permission::InvoicesView);
-        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder', 'recordedPayments', 'creditNotes']);
+        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder', 'recordedPayments', 'creditNotes', 'deductions.payment']);
         $presenter = app(CommercialDocumentPresenter::class);
         $verifiable = $presenter->isVerifiable($invoice);
 
@@ -145,47 +150,111 @@ class InvoiceController extends Controller
         $this->requirePermission(Permission::InvoicesUpdateDraft);
         $this->ensureDraft($invoice);
 
-        return view('invoices.edit', compact('invoice'));
+        $invoice->load('deductions');
+        $treasuryAccounts = TreasuryAccount::query()
+            ->where('is_active', true)
+            ->where('currency', $invoice->currency)
+            ->orderBy('name')
+            ->get();
+
+        return view('invoices.edit', compact('invoice', 'treasuryAccounts'));
     }
 
-    public function update(InvoiceDraftRequest $request, Invoice $invoice): RedirectResponse
+    public function update(InvoiceDraftRequest $request, Invoice $invoice, PaymentRecorder $recorder): RedirectResponse
     {
         $this->requirePermission(Permission::InvoicesUpdateDraft);
-        $this->ensureDraft($invoice);
-        $invoice->update($request->validated());
+        $data = $request->validated();
+
+        DB::transaction(function () use ($invoice, $data, $recorder) {
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            $this->ensureDraft($invoice);
+            $deductions = $this->buildDeductions($invoice, $data['deductions'] ?? [], $recorder);
+
+            $invoice->update([
+                'issue_date' => $data['issue_date'],
+                'due_date' => $data['due_date'],
+                'notes' => $data['notes'],
+                'deductions_total' => round((float) collect($deductions)->sum('amount'), 2),
+            ]);
+            $invoice->deductions()->delete();
+            $invoice->deductions()->createMany($deductions);
+        });
 
         return to_route('invoices.show', $invoice)->with('success', 'La facture brouillon a été mise à jour.');
     }
 
-    public function validateInvoice(Invoice $invoice, AccountingService $accounting): RedirectResponse
+    /**
+     * Validation numbers the invoice, posts the sales entry and turns each
+     * deducted advance into a recorded payment dated when it was received.
+     */
+    public function validateInvoice(Invoice $invoice, AccountingService $accounting, PaymentRecorder $recorder): RedirectResponse
     {
         $this->requirePermission(Permission::InvoicesValidate);
         $this->ensureDraft($invoice);
+        if ($invoice->deductions()->where('type', DeductionType::Advance)->exists()) {
+            $this->requirePermission(Permission::PaymentsRecord);
+        }
 
-        DB::transaction(function () use ($invoice, $accounting) {
-            $invoice->update([
-                'number' => CompanySetting::current()->documentNumber('invoice', $invoice->id, $invoice->issue_date),
-                'status' => InvoiceStatus::Validated,
-                'validated_at' => now(),
-                'validated_by' => auth()->id(),
-            ]);
-            $accounting->postInvoice($invoice, auth()->id());
-        });
+        try {
+            DB::transaction(function () use ($invoice, $accounting, $recorder) {
+                $invoice = Invoice::query()->with('deductions')->lockForUpdate()->findOrFail($invoice->id);
+                $this->ensureDraft($invoice);
+                $invoice->update([
+                    'number' => CompanySetting::current()->documentNumber('invoice', $invoice->id, $invoice->issue_date),
+                    'status' => InvoiceStatus::Validated,
+                    'validated_at' => now(),
+                    'validated_by' => auth()->id(),
+                ]);
+                $accounting->postInvoice($invoice, auth()->id());
+
+                foreach ($invoice->deductions->filter(fn (InvoiceDeduction $deduction) => $deduction->isAdvance()) as $advance) {
+                    $payment = $recorder->record($invoice, [
+                        'payment_date' => $advance->received_on,
+                        'amount' => $advance->amount,
+                        'method' => $advance->payment_method,
+                        'treasury_account_id' => $advance->treasury_account_id,
+                        'reference' => $advance->reference,
+                        'notes' => "Avance déduite sur la facture {$invoice->number} : {$advance->description}",
+                    ], auth()->id());
+                    $advance->update(['payment_id' => $payment->id]);
+                }
+            });
+        } catch (ValidationException $exception) {
+            return back()->with('error', 'Avance non enregistrée : '.collect($exception->errors())->flatten()->first().' Corrigez la facture brouillon.');
+        }
 
         return back()->with('success', 'La facture a été validée et numérotée.');
     }
 
-    public function cancel(Invoice $invoice): RedirectResponse
+    /**
+     * A validated invoice can only be cancelled while nothing has been
+     * settled against it; its sales entry is then reversed.
+     */
+    public function cancel(Invoice $invoice, AccountingService $accounting): RedirectResponse
     {
         $this->requirePermission(Permission::InvoicesCancel);
-        abort_if($invoice->status === InvoiceStatus::Cancelled, 409, 'Cette facture est déjà annulée.');
-        $invoice->update([
-            'status' => InvoiceStatus::Cancelled,
-            'cancelled_at' => now(),
-            'cancelled_by' => auth()->id(),
-        ]);
 
-        return back()->with('success', 'La facture a été annulée.');
+        $blocker = DB::transaction(function () use ($invoice, $accounting) {
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            abort_if($invoice->status === InvoiceStatus::Cancelled, 409, 'Cette facture est déjà annulée.');
+
+            if ($blocker = $invoice->cancellationBlocker()) {
+                return $blocker;
+            }
+
+            $invoice->update([
+                'status' => InvoiceStatus::Cancelled,
+                'cancelled_at' => now(),
+                'cancelled_by' => auth()->id(),
+            ]);
+            $accounting->reverseInvoice($invoice, auth()->id());
+
+            return null;
+        });
+
+        return $blocker
+            ? back()->with('error', $blocker)
+            : back()->with('success', 'La facture a été annulée et son écriture comptable contrepassée.');
     }
 
     private function ensureDraft(Invoice $invoice): void
@@ -193,9 +262,58 @@ class InvoiceController extends Controller
         abort_unless($invoice->status === InvoiceStatus::Draft, 409, 'Seule une facture brouillon peut être modifiée.');
     }
 
+    /**
+     * Amounts are always recomputed here: only quantity and unit price are
+     * trusted from the form.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function buildDeductions(Invoice $invoice, array $rows, PaymentRecorder $recorder): array
+    {
+        $deductions = [];
+        foreach (array_values($rows) as $index => $row) {
+            $type = DeductionType::from($row['type']);
+            $isAdvance = $type === DeductionType::Advance;
+            $treasuryAccount = null;
+
+            if ($isAdvance) {
+                try {
+                    $treasuryAccount = $recorder->resolveTreasuryAccount($invoice, $row['treasury_account_id'] ?? null);
+                } catch (ValidationException $exception) {
+                    throw ValidationException::withMessages([
+                        "deductions.{$index}.treasury_account_id" => collect($exception->errors())->flatten()->first(),
+                    ]);
+                }
+            }
+
+            $deductions[] = [
+                'position' => $index + 1,
+                'type' => $type,
+                'description' => $row['description'],
+                'quantity' => $row['quantity'],
+                'unit_price' => $row['unit_price'],
+                'amount' => round((float) $row['quantity'] * (float) $row['unit_price'], 2),
+                'received_on' => $isAdvance ? $row['received_on'] : null,
+                'payment_method' => $isAdvance ? $row['payment_method'] : null,
+                'treasury_account_id' => $treasuryAccount?->id,
+                'reference' => $isAdvance ? $row['reference'] : null,
+            ];
+        }
+
+        $total = round((float) collect($deductions)->sum('amount'), 2);
+        if ($total > (float) $invoice->total) {
+            throw ValidationException::withMessages([
+                'deductions' => 'Les déductions ('.number_format($total, 2, ',', ' ').') dépassent le total TTC de la facture ('.number_format((float) $invoice->total, 2, ',', ' ').').',
+            ]);
+        }
+
+        return $deductions;
+    }
+
     private function documentData(Invoice $invoice, bool $forPdf): array
     {
-        $invoice->load(['party', 'lines', 'quote', 'creator']);
+        $invoice->load(['party', 'lines', 'quote', 'creator', 'deductions', 'recordedPayments', 'creditNotes']);
 
         return [
             ...app(CommercialDocumentPresenter::class)->present($invoice),
@@ -207,7 +325,8 @@ class InvoiceController extends Controller
             'reference' => $invoice->quote ? ['Devis d’origine', $invoice->quote->number] : null,
             'settlement' => $invoice->status === InvoiceStatus::Validated ? [
                 'credited' => $invoice->creditedAmount(),
-                'paid' => $invoice->paidAmount(),
+                // Advances already appear among the deductions.
+                'paid' => round($invoice->paidAmount() - $invoice->advancePaidAmount(), 2),
                 'balance' => $invoice->balanceDue(),
             ] : null,
             'backUrl' => route('invoices.show', $invoice),
