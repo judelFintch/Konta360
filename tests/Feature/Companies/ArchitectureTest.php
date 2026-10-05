@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AuthenticationCode;
 use App\Models\Company;
 use App\Models\Plan;
 use App\Models\User;
@@ -16,9 +17,10 @@ use Symfony\Component\Finder\Finder;
 arch('every business model is confined to a company')
     ->expect('App\Models')
     ->toUseTrait(BelongsToCompany::class)
-    // Shared by every company: the companies themselves, their users (see
-    // ADR 0002 § 4) and the subscription plans.
-    ->ignoring([Company::class, User::class, Plan::class]);
+    // Not company data: the companies themselves, their users (see ADR 0002
+    // § 4), the subscription plans and the sign-in codes, which are used
+    // before any company is known (ADR 0004).
+    ->ignoring([Company::class, User::class, Plan::class, AuthenticationCode::class]);
 
 it('uses no unscoped exists/unique validation rule on business tables', function () {
     $offenders = [];

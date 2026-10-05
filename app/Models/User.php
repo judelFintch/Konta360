@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Modules\Authentication\Enums\AuthenticationCodePurpose;
+use App\Modules\Authentication\Services\AuthenticationCodeService;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -28,6 +30,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Sends an eight-digit code instead of the default signed link
+     * (ADR 0004). Called by Laravel when a user registers.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        app(AuthenticationCodeService::class)->send($this, AuthenticationCodePurpose::EmailVerification);
     }
 
     public function auditLogs(): HasMany
