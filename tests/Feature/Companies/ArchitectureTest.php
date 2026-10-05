@@ -1,8 +1,11 @@
 <?php
 
 use App\Models\Company;
+use App\Models\Plan;
 use App\Models\User;
 use App\Modules\Companies\Concerns\BelongsToCompany;
+use App\Modules\Companies\Services\CompanyDataExporter;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Finder\Finder;
 
 /*
@@ -13,7 +16,9 @@ use Symfony\Component\Finder\Finder;
 arch('every business model is confined to a company')
     ->expect('App\Models')
     ->toUseTrait(BelongsToCompany::class)
-    ->ignoring([Company::class, User::class]);
+    // Shared by every company: the companies themselves, their users (see
+    // ADR 0002 § 4) and the subscription plans.
+    ->ignoring([Company::class, User::class, Plan::class]);
 
 it('uses no unscoped exists/unique validation rule on business tables', function () {
     $offenders = [];
@@ -24,13 +29,24 @@ it('uses no unscoped exists/unique validation rule on business tables', function
             continue;
         }
         foreach (explode("\n", $file->getContents()) as $number => $line) {
-            // Email addresses are unique across the whole platform (users table).
-            $usersOnly = str_contains($line, "Rule::unique('users')") || str_contains($line, 'User::class');
-            if (preg_match($pattern, $line) && ! $usersOnly) {
+            // Tables shared by every company: users (email addresses are unique
+            // across the platform) and plans.
+            $sharedTable = str_contains($line, "Rule::unique('users')") || str_contains($line, 'User::class')
+                || str_contains($line, "Rule::exists('plans'");
+            if (preg_match($pattern, $line) && ! $sharedTable) {
                 $offenders[] = $file->getRelativePathname().':'.($number + 1);
             }
         }
     }
 
     expect($offenders)->toBe([]);
+});
+
+it('exports and purges every table that holds company data', function () {
+    $companyTables = collect(Schema::getTableListing(schemaQualified: false))
+        ->filter(fn (string $table) => Schema::hasColumn($table, 'company_id'))
+        ->reject(fn (string $table) => $table === 'users')
+        ->sort()->values()->all();
+
+    expect(collect(CompanyDataExporter::TABLES)->sort()->values()->all())->toBe($companyTables);
 });

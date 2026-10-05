@@ -11,6 +11,7 @@ use App\Models\TreasuryAccount;
 use App\Models\User;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Billing\Services\PlanLimits;
 use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
@@ -192,10 +193,15 @@ class InvoiceController extends Controller
      * Validation numbers the invoice, posts the sales entry and turns each
      * deducted advance into a recorded payment dated when it was received.
      */
-    public function validateInvoice(Invoice $invoice, AccountingService $accounting, PaymentRecorder $recorder): RedirectResponse
+    public function validateInvoice(Invoice $invoice, AccountingService $accounting, PaymentRecorder $recorder, PlanLimits $limits): RedirectResponse
     {
         $this->requirePermission(Permission::InvoicesValidate);
         $this->ensureDraft($invoice);
+        try {
+            $limits->ensureCanValidateInvoice(Company::current());
+        } catch (ValidationException $exception) {
+            return back()->with('error', collect($exception->errors())->flatten()->first());
+        }
         if ($invoice->deductions()->where('type', DeductionType::Advance)->exists()) {
             $this->requirePermission(Permission::PaymentsRecord);
         }

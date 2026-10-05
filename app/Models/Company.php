@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Modules\Billing\Enums\SubscriptionStatus;
 use App\Modules\Companies\Services\CurrentCompany;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * A subscribing organisation. Every business record belongs to exactly one
@@ -40,6 +43,7 @@ class Company extends Model
         'invoice_prefix' => 'FAC',
         'credit_note_prefix' => 'AVO',
         'number_padding' => 5,
+        'billing_exempt' => false,
     ];
 
     /**
@@ -53,6 +57,62 @@ class Company extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
+    }
+
+    public function termsAcceptor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'terms_accepted_by');
+    }
+
+    public function closureRequester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closure_requested_by');
+    }
+
+    /**
+     * Paid days run to the end of subscription_ends_at; trial days to the
+     * end of trial_ends_at (ADR 0003 § 1).
+     */
+    public function subscriptionStatus(): SubscriptionStatus
+    {
+        return match (true) {
+            $this->billing_exempt => SubscriptionStatus::Exempt,
+            $this->subscription_ends_at !== null && today()->lte($this->subscription_ends_at) => SubscriptionStatus::Active,
+            $this->trial_ends_at !== null && today()->lte($this->trial_ends_at) => SubscriptionStatus::Trial,
+            default => SubscriptionStatus::Expired,
+        };
+    }
+
+    /**
+     * Last day the company can work normally, or null when it has no end.
+     */
+    public function accessEndsOn(): ?Carbon
+    {
+        return match ($this->subscriptionStatus()) {
+            SubscriptionStatus::Active => $this->subscription_ends_at,
+            SubscriptionStatus::Trial => $this->trial_ends_at,
+            default => null,
+        };
+    }
+
+    public function hasAcceptedCurrentTerms(): bool
+    {
+        return $this->terms_version === config('konta360.terms_version');
+    }
+
+    public function isClosureRequested(): bool
+    {
+        return $this->closure_requested_at !== null && $this->closed_at === null;
+    }
+
+    public function isClosed(): bool
+    {
+        return $this->closed_at !== null;
     }
 
     public function isSuspended(): bool
@@ -76,6 +136,12 @@ class Company extends Model
             'default_quote_validity_days' => 'integer',
             'number_padding' => 'integer',
             'suspended_at' => 'datetime',
+            'trial_ends_at' => 'date',
+            'subscription_ends_at' => 'date',
+            'billing_exempt' => 'boolean',
+            'terms_accepted_at' => 'datetime',
+            'closure_requested_at' => 'datetime',
+            'closed_at' => 'datetime',
         ];
     }
 }

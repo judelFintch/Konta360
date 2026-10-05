@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Administration\Enums\Role as RoleEnum;
+use App\Modules\Billing\Services\PlanLimits;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -31,7 +32,7 @@ class UserManagementController extends Controller
         return view('administration.users.create', ['roles' => RoleEnum::cases()]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, PlanLimits $limits): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -39,6 +40,7 @@ class UserManagementController extends Controller
             'password' => ['required', 'confirmed', 'min:8'],
             'role' => ['required', Rule::enum(RoleEnum::class)],
         ]);
+        $limits->ensureCanAddUser(Company::current());
         $user = new User([
             'name' => $data['name'], 'email' => $data['email'], 'password' => $data['password'],
             'is_active' => true,
@@ -60,7 +62,7 @@ class UserManagementController extends Controller
         ]);
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(Request $request, User $user, PlanLimits $limits): RedirectResponse
     {
         $this->ensureSameCompany($user);
         $data = $request->validate([
@@ -74,6 +76,10 @@ class UserManagementController extends Controller
             throw ValidationException::withMessages([
                 'is_active' => 'Vous ne pouvez pas désactiver votre propre compte ni retirer votre rôle administrateur.',
             ]);
+        }
+
+        if ($data['is_active'] && ! $user->is_active) {
+            $limits->ensureCanAddUser(Company::current());
         }
 
         $user->update([

@@ -60,3 +60,24 @@ société :
 ```php
 app(\App\Modules\Companies\Services\CurrentCompany::class)->set(\App\Models\Company::find(1));
 ```
+
+## Abonnements, CGU et données (ADR 0003)
+
+Après `php artisan migrate --force` :
+
+- les sociétés déjà présentes passent en **accès offert** (formule Entreprise) : rien ne change pour
+  elles tant que la plateforme ne retire pas cet accès ;
+- renseigner dans `.env` les coordonnées affichées aux sociétés pour payer (`BILLING_MOBILE_MONEY`,
+  `BILLING_BANK_ACCOUNT` et `BILLING_CONTACT_EMAIL`), puis lancer `php artisan optimize` ;
+- vérifier les prix et les limites des formules dans `/platform/plans` ;
+- vérifier et faire valider les textes `/legal/terms` et `/legal/privacy`. À chaque modification,
+  augmenter `TERMS_VERSION` : les administrateurs seront invités à les accepter de nouveau.
+
+Les paiements déclarés par les sociétés apparaissent dans `/platform/payments`. Ne confirmer qu'après
+avoir retrouvé la référence sur le relevé.
+
+Une société clôturée ne peut être supprimée qu'à l'issue de la durée légale de conservation :
+
+```bash
+php artisan konta360:purge-company <id>
+```

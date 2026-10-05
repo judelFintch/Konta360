@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Journal;
 use App\Models\User;
 use App\Modules\Administration\Enums\Role;
+use App\Modules\Billing\Enums\SubscriptionStatus;
 use App\Modules\Companies\Services\CompanyProvisioner;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
@@ -29,7 +30,9 @@ test('registering creates a provisioned company and its administrator', function
         ->set('name', 'Test User')
         ->set('email', 'test@example.com')
         ->set('password', 'password')
-        ->set('password_confirmation', 'password');
+        ->set('password_confirmation', 'password')
+        ->set('plan', 'essentiel')
+        ->set('terms', true);
 
     $component->call('register');
 
@@ -44,7 +47,12 @@ test('registering creates a provisioned company and its administrator', function
         ->and($company->default_currency)->toBe('USD')
         ->and($company->id)->not->toBe(Company::query()->oldest('id')->value('id'))
         ->and($user->hasRole(Role::Administrateur->value))->toBeTrue()
-        ->and($user->hasVerifiedEmail())->toBeFalse();
+        ->and($user->hasVerifiedEmail())->toBeFalse()
+        ->and($company->plan->code)->toBe('essentiel')
+        ->and($company->subscriptionStatus())->toBe(SubscriptionStatus::Trial)
+        ->and($company->trial_ends_at->toDateString())->toBe(today()->addDays(29)->toDateString())
+        ->and($company->hasAcceptedCurrentTerms())->toBeTrue()
+        ->and($company->terms_accepted_by)->toBe($user->id);
 
     $this->asCompany($company, function () {
         expect(Account::count())->toBe(count(CompanyProvisioner::ACCOUNTS))
@@ -59,19 +67,20 @@ test('a new administrator must verify their email before working', function () {
         ->set('email', 'test@example.com')
         ->set('password', 'password')
         ->set('password_confirmation', 'password')
+        ->set('terms', true)
         ->call('register');
 
     $this->get(route('dashboard'))->assertRedirect(route('verification.notice'));
 });
 
-test('registration requires a company name', function () {
+test('registration requires a company name and the acceptance of the terms', function () {
     Volt::test('pages.auth.register')
         ->set('name', 'Test User')
         ->set('email', 'test@example.com')
         ->set('password', 'password')
         ->set('password_confirmation', 'password')
         ->call('register')
-        ->assertHasErrors(['company_name' => 'required']);
+        ->assertHasErrors(['company_name' => 'required', 'terms' => 'accepted']);
 
     expect(User::where('email', 'test@example.com')->exists())->toBeFalse()
         ->and(Company::count())->toBe(1);

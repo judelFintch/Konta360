@@ -5,9 +5,11 @@ namespace App\Modules\Companies\Services;
 use App\Models\Account;
 use App\Models\Company;
 use App\Models\Journal;
+use App\Models\Plan;
 use App\Models\User;
 use App\Modules\Administration\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Administration\Enums\Role as RoleEnum;
+use App\Modules\Billing\Services\SubscriptionManager;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
@@ -45,26 +47,37 @@ class CompanyProvisioner
         ['code' => 'VE', 'name' => 'Journal des ventes', 'type' => 'sales'],
     ];
 
-    public function __construct(private readonly CurrentCompany $currentCompany) {}
+    public function __construct(
+        private readonly CurrentCompany $currentCompany,
+        private readonly SubscriptionManager $subscriptions,
+    ) {}
 
     /**
-     * Creates the company with its accounting set-up and its administrator,
-     * all or nothing.
+     * Creates the company with its accounting set-up, its free trial and its
+     * administrator, who accepted the current terms of service; all or
+     * nothing.
      *
      * @param  array<string, mixed>  $companyData
      * @param  array{name: string, email: string, password: string}  $adminData
      * @return array{0: Company, 1: User}
      */
-    public function register(array $companyData, array $adminData): array
+    public function register(array $companyData, array $adminData, Plan $plan): array
     {
-        return DB::transaction(function () use ($companyData, $adminData) {
+        return DB::transaction(function () use ($companyData, $adminData, $plan) {
             $company = Company::create($companyData);
             $this->provision($company);
+            $this->subscriptions->startTrial($company, $plan);
 
             $admin = new User($adminData);
             $admin->company()->associate($company);
             $admin->save();
             $admin->assignRole(RoleEnum::Administrateur->value);
+
+            $company->forceFill([
+                'terms_version' => config('konta360.terms_version'),
+                'terms_accepted_at' => now(),
+                'terms_accepted_by' => $admin->id,
+            ])->save();
 
             return [$company, $admin];
         });

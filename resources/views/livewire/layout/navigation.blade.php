@@ -147,7 +147,13 @@ new class extends Component
                             <x-dropdown-link :href="route('administration.company.edit')" wire:navigate>
                                 Paramètres de l’entreprise
                             </x-dropdown-link>
+                            <x-dropdown-link :href="route('administration.data.show')" wire:navigate>
+                                Données et confidentialité
+                            </x-dropdown-link>
                         @endcan
+                        <x-dropdown-link :href="route('subscription.show')" wire:navigate>
+                            Abonnement
+                        </x-dropdown-link>
                         <x-dropdown-link :href="route('profile')" wire:navigate>
                             Mon profil
                         </x-dropdown-link>
@@ -262,7 +268,13 @@ new class extends Component
                     <x-responsive-nav-link :href="route('administration.company.edit')" :active="request()->routeIs('administration.company.*')" wire:navigate>
                         Paramètres de l’entreprise
                     </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('administration.data.show')" :active="request()->routeIs('administration.data.*')" wire:navigate>
+                        Données et confidentialité
+                    </x-responsive-nav-link>
                 @endcan
+                <x-responsive-nav-link :href="route('subscription.show')" :active="request()->routeIs('subscription.*')" wire:navigate>
+                    Abonnement
+                </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('profile')" wire:navigate>
                     Mon profil
                 </x-responsive-nav-link>

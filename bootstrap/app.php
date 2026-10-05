@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsurePlatformAdmin;
+use App\Http\Middleware\EnsureWritableSubscription;
 use App\Http\Middleware\RecordAuditLog;
 use App\Http\Middleware\SetCurrentCompany;
 use Illuminate\Foundation\Application;
@@ -19,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             SetCurrentCompany::class,
+            // Before the audit trail: a refused write is not recorded.
+            EnsureWritableSubscription::class,
             RecordAuditLog::class,
         ]);
         // Route model binding queries business models, which need the

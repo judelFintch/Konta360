@@ -17,6 +17,7 @@
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
             <livewire:layout.navigation />
+            <x-subscription-banner />
 
             <!-- Page Heading -->
             @if (isset($header))
