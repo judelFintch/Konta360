@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -22,15 +23,19 @@ class LoginForm extends Form
     public bool $remember = false;
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Checks the credentials and returns the user, without signing in: the
+     * sign-in is completed by the code sent by email (ADR 0004).
      *
      * @throws ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(): User
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only(['email', 'password']), $this->remember)) {
+        $provider = Auth::getProvider();
+        $user = $provider->retrieveByCredentials(['email' => $this->email]);
+
+        if (! $user || ! $provider->validateCredentials($user, ['password' => $this->password])) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -38,23 +43,28 @@ class LoginForm extends Form
             ]);
         }
 
-        if (! Auth::user()->is_active) {
-            Auth::logout();
-
-            throw ValidationException::withMessages([
-                'form.email' => __('Ce compte utilisateur est désactivé.'),
-            ]);
-        }
-
-        if (Auth::user()->company?->isSuspended()) {
-            Auth::logout();
-
-            throw ValidationException::withMessages([
-                'form.email' => __('L’accès de votre société est suspendu. Contactez le support Konta360.'),
-            ]);
-        }
+        self::ensureCanSignIn($user, 'form.email');
 
         RateLimiter::clear($this->throttleKey());
+
+        return $user;
+    }
+
+    /**
+     * Checked again when the code is entered: the account or its company
+     * may have been disabled in between.
+     *
+     * @throws ValidationException
+     */
+    public static function ensureCanSignIn(User $user, string $field): void
+    {
+        if (! $user->is_active) {
+            throw ValidationException::withMessages([$field => __('Ce compte utilisateur est désactivé.')]);
+        }
+
+        if ($user->company?->isSuspended()) {
+            throw ValidationException::withMessages([$field => __('L’accès de votre société est suspendu. Contactez le support Konta360.')]);
+        }
     }
 
     /**

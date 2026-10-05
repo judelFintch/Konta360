@@ -81,3 +81,26 @@ Une société clôturée ne peut être supprimée qu'à l'issue de la durée lé
 ```bash
 php artisan konta360:purge-company <id>
 ```
+
+## Envoi des e-mails (codes de connexion, ADR 0004)
+
+Chaque inscription et chaque connexion envoient un code à 8 chiffres par e-mail.
+**Sans envoi d'e-mails fonctionnel, plus personne ne peut se connecter.**
+
+Créer la boîte `dev@fintchweb.com` dans cPanel (Comptes de messagerie), puis renseigner dans
+`.env` les paramètres SMTP indiqués par cPanel (« Connect Devices ») :
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_SCHEME=smtps
+MAIL_HOST=mail.fintchweb.com
+MAIL_PORT=465
+MAIL_USERNAME=dev@fintchweb.com
+MAIL_PASSWORD=le-mot-de-passe-de-la-boite
+MAIL_FROM_ADDRESS="dev@fintchweb.com"
+MAIL_FROM_NAME="Konta360"
+```
+
+Puis `php artisan optimize:clear && php artisan optimize`. Vérifier les enregistrements SPF et
+DKIM du domaine (cPanel › Délivrabilité des e-mails), sinon les codes risquent d'arriver en
+courrier indésirable.

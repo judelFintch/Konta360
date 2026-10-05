@@ -1,7 +1,10 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
-use Illuminate\Support\Facades\Session;
+use App\Modules\Authentication\Enums\AuthenticationCodePurpose;
+use App\Modules\Authentication\Services\AuthenticationCodeService;
+use App\Modules\Authentication\Services\PendingLogin;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -10,17 +13,23 @@ new #[Layout('layouts.showcase')] class extends Component
     public LoginForm $form;
 
     /**
-     * Handle an incoming authentication request.
+     * First step: the password. The sign-in is completed on the next page
+     * with the code sent by email (ADR 0004).
      */
-    public function login(): void
+    public function login(AuthenticationCodeService $codes): void
     {
         $this->validate();
 
-        $this->form->authenticate();
+        $user = $this->form->authenticate();
+        PendingLogin::start($user, $this->form->remember);
 
-        Session::regenerate();
+        try {
+            $codes->send($user, AuthenticationCodePurpose::Login);
+        } catch (ValidationException) {
+            // A code was sent less than a minute ago: it is still valid.
+        }
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        $this->redirectRoute('login.code', navigate: true);
     }
 }; ?>
 
