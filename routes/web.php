@@ -6,6 +6,7 @@ use App\Http\Controllers\AccountingReportController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BankReconciliationController;
 use App\Http\Controllers\CatalogItemController;
+use App\Http\Controllers\CompanyDataController;
 use App\Http\Controllers\CompanySettingController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\DashboardController;
@@ -15,8 +16,13 @@ use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Platform\PlanController as PlatformPlanController;
+use App\Http\Controllers\Platform\SubscriptionPaymentController as PlatformSubscriptionPaymentController;
+use App\Http\Controllers\PricingController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TreasuryController;
 use App\Http\Controllers\UserManagementController;
 use App\Modules\Administration\Enums\Permission;
@@ -30,9 +36,16 @@ Route::get('verification/{type}/{id}/{token}', DocumentVerificationController::c
     ->whereAlphaNumeric('token')
     ->middleware('throttle:30,1')
     ->name('documents.verify');
-Route::get('verification/logo', [CompanySettingController::class, 'asset'])
-    ->defaults('type', 'logo')
+Route::get('verification/{type}/{id}/{token}/logo', [DocumentVerificationController::class, 'logo'])
+    ->whereIn('type', ['quote', 'invoice', 'credit_note'])
+    ->whereNumber('id')
+    ->whereAlphaNumeric('token')
+    ->middleware('throttle:30,1')
     ->name('documents.verify.logo');
+
+Route::get('tarifs', PricingController::class)->name('pricing');
+Route::view('legal/terms', 'legal.terms')->name('legal.terms');
+Route::view('legal/privacy', 'legal.privacy')->name('legal.privacy');
 
 Route::get('dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])
@@ -70,6 +83,23 @@ Route::get('administration/company', [CompanySettingController::class, 'edit'])
 Route::put('administration/company', [CompanySettingController::class, 'update'])
     ->middleware(['auth', 'verified', 'permission:'.Permission::SettingsManage->value])
     ->name('administration.company.update');
+Route::get('subscription', [SubscriptionController::class, 'show'])
+    ->middleware(['auth', 'verified'])
+    ->name('subscription.show');
+Route::post('subscription/payments', [SubscriptionController::class, 'storePayment'])
+    ->middleware(['auth', 'verified', 'throttle:10,1'])
+    ->name('subscription.payments.store');
+
+Route::prefix('administration/data')->name('administration.data.')
+    ->middleware(['auth', 'verified', 'permission:'.Permission::SettingsManage->value])
+    ->group(function () {
+        Route::get('/', [CompanyDataController::class, 'show'])->name('show');
+        Route::get('export', [CompanyDataController::class, 'export'])->middleware('throttle:5,1')->name('export');
+        Route::post('terms', [CompanyDataController::class, 'acceptTerms'])->name('terms.accept');
+        Route::post('closure', [CompanyDataController::class, 'requestClosure'])->name('closure.request');
+        Route::delete('closure', [CompanyDataController::class, 'cancelClosure'])->name('closure.cancel');
+    });
+
 Route::get('company-assets/{type}', [CompanySettingController::class, 'asset'])
     ->middleware(['auth', 'verified'])
     ->name('administration.company.asset');
@@ -142,6 +172,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('exports/accounting-entries.csv', [ReportExportController::class, 'accountingEntries'])->name('exports.accounting-entries');
     Route::get('exports/treasury.csv', [ReportExportController::class, 'treasury'])->name('exports.treasury');
     Route::get('exports/audit.csv', [ReportExportController::class, 'audit'])->name('exports.audit');
+});
+
+Route::prefix('platform')->name('platform.')->middleware(['auth', 'verified', 'platform'])->group(function () {
+    Route::get('companies', [PlatformCompanyController::class, 'index'])->name('companies.index');
+    Route::patch('companies/{company}/suspend', [PlatformCompanyController::class, 'suspend'])->name('companies.suspend');
+    Route::patch('companies/{company}/reactivate', [PlatformCompanyController::class, 'reactivate'])->name('companies.reactivate');
+    Route::patch('companies/{company}/exempt', [PlatformCompanyController::class, 'toggleExempt'])->name('companies.exempt');
+    Route::patch('companies/{company}/close', [PlatformCompanyController::class, 'close'])->name('companies.close');
+    Route::get('plans', [PlatformPlanController::class, 'index'])->name('plans.index');
+    Route::put('plans/{plan}', [PlatformPlanController::class, 'update'])->name('plans.update');
+    Route::get('payments', [PlatformSubscriptionPaymentController::class, 'index'])->name('payments.index');
+    Route::patch('payments/{payment}/confirm', [PlatformSubscriptionPaymentController::class, 'confirm'])->whereNumber('payment')->name('payments.confirm');
+    Route::patch('payments/{payment}/reject', [PlatformSubscriptionPaymentController::class, 'reject'])->whereNumber('payment')->name('payments.reject');
+    Route::post('logout', [PlatformCompanyController::class, 'logout'])->name('logout');
 });
 
 require __DIR__.'/auth.php';

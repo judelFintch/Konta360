@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\CompanySetting;
+use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\User;
@@ -15,7 +15,7 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->user = User::factory()->create();
     $this->user->assignRole(Role::Comptable->value);
-    CompanySetting::query()->updateOrCreate(['id' => 1], [
+    Company::query()->updateOrCreate(['id' => 1], [
         'name' => 'Société Démo SARL',
         'tax_identifier' => 'A1234567B',
         'trade_register' => 'CD/KIN/RCCM/24-B-0001',
@@ -117,7 +117,7 @@ it('spells amounts in french words', function (float $amount, string $currency, 
 ]);
 
 it('warns when the company identity is incomplete', function () {
-    CompanySetting::query()->update(['tax_identifier' => null]);
+    Company::query()->update(['tax_identifier' => null]);
 
     $this->actingAs($this->user)
         ->get(route('invoices.print', $this->invoice))

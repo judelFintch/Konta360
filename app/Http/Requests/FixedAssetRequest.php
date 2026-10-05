@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Modules\Companies\Validation\CompanyRule;
 use App\Modules\FixedAssets\Enums\AssetCategory;
 use App\Modules\FixedAssets\Enums\AssetStatus;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,7 +27,7 @@ class FixedAssetRequest extends FormRequest
             'residual_value' => ['required', 'numeric', 'min:0', 'lt:acquisition_cost'],
             'currency' => ['required', 'in:CDF,USD'],
             'useful_life_months' => ['required', 'integer', 'min:1', 'max:1200'],
-            'supplier_id' => ['nullable', 'exists:parties,id'],
+            'supplier_id' => ['nullable', CompanyRule::exists('parties')],
             'status' => ['sometimes', Rule::enum(AssetStatus::class)],
         ];
     }

@@ -1,10 +1,14 @@
 <?php
 
+use App\Http\Middleware\EnsurePlatformAdmin;
+use App\Http\Middleware\EnsureWritableSubscription;
+use App\Http\Middleware\RecordAuditLog;
+use App\Http\Middleware\SetCurrentCompany;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use App\Http\Middleware\RecordAuditLog;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -15,10 +19,17 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            SetCurrentCompany::class,
+            // Before the audit trail: a refused write is not recorded.
+            EnsureWritableSubscription::class,
             RecordAuditLog::class,
         ]);
+        // Route model binding queries business models, which need the
+        // current company.
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: SetCurrentCompany::class);
         $middleware->alias([
             'permission' => PermissionMiddleware::class,
+            'platform' => EnsurePlatformAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

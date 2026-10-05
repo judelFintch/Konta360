@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InvoiceDraftRequest;
-use App\Models\CompanySetting;
+use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceDeduction;
 use App\Models\Quote;
@@ -11,6 +11,8 @@ use App\Models\TreasuryAccount;
 use App\Models\User;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Billing\Services\PlanLimits;
+use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\DeductionType;
@@ -115,7 +117,7 @@ class InvoiceController extends Controller
                 'party_id' => $quote->party_id,
                 'status' => InvoiceStatus::Draft,
                 'issue_date' => today(),
-                'due_date' => today()->addDays(CompanySetting::current()->default_payment_days),
+                'due_date' => today()->addDays(Company::current()->default_payment_days),
                 'currency' => $quote->currency,
                 'language' => $quote->party->document_language ?? DocumentLanguage::French,
                 'notes' => $quote->notes,
@@ -191,10 +193,15 @@ class InvoiceController extends Controller
      * Validation numbers the invoice, posts the sales entry and turns each
      * deducted advance into a recorded payment dated when it was received.
      */
-    public function validateInvoice(Invoice $invoice, AccountingService $accounting, PaymentRecorder $recorder): RedirectResponse
+    public function validateInvoice(Invoice $invoice, AccountingService $accounting, PaymentRecorder $recorder, PlanLimits $limits): RedirectResponse
     {
         $this->requirePermission(Permission::InvoicesValidate);
         $this->ensureDraft($invoice);
+        try {
+            $limits->ensureCanValidateInvoice(Company::current());
+        } catch (ValidationException $exception) {
+            return back()->with('error', collect($exception->errors())->flatten()->first());
+        }
         if ($invoice->deductions()->where('type', DeductionType::Advance)->exists()) {
             $this->requirePermission(Permission::PaymentsRecord);
         }
@@ -204,7 +211,7 @@ class InvoiceController extends Controller
                 $invoice = Invoice::query()->with('deductions')->lockForUpdate()->findOrFail($invoice->id);
                 $this->ensureDraft($invoice);
                 $invoice->update([
-                    'number' => CompanySetting::current()->documentNumber('invoice', $invoice->id, $invoice->issue_date),
+                    'number' => SequenceType::Invoice->nextNumber($invoice->issue_date),
                     'status' => InvoiceStatus::Validated,
                     'validated_at' => now(),
                     'validated_by' => auth()->id(),

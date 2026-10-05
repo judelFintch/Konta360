@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Modules\Catalog\Enums\ItemType;
 use App\Modules\Catalog\Enums\Unit;
+use App\Modules\Companies\Validation\CompanyRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,7 +28,7 @@ class CatalogItemRequest extends FormRequest
                 'required',
                 'string',
                 'max:80',
-                Rule::unique('catalog_items')->ignore($this->route('catalog_item')),
+                CompanyRule::unique('catalog_items')->ignore($this->route('catalog_item')),
             ],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:3000'],

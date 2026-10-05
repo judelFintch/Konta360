@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['fixed_asset_id', 'period_date', 'amount', 'accounting_entry_id', 'posted_at', 'posted_by'])]
 class FixedAssetDepreciation extends Model
 {
+    use BelongsToCompany;
+
     protected function casts(): array
     {
         return [

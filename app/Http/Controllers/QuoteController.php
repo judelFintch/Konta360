@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\QuoteRequest;
 use App\Models\CatalogItem;
-use App\Models\CompanySetting;
 use App\Models\Party;
 use App\Models\Quote;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Parties\Enums\PartyType;
 use App\Modules\Quotes\Enums\QuoteStatus;
@@ -74,7 +74,7 @@ class QuoteController extends Controller
                 'status' => QuoteStatus::Draft,
                 'created_by' => auth()->id(),
             ]);
-            $quote->update(['number' => CompanySetting::current()->documentNumber('quote', $quote->id, $quote->issue_date)]);
+            $quote->update(['number' => SequenceType::Quote->nextNumber($quote->issue_date)]);
             $quote->lines()->createMany($totals['lines']);
 
             return $quote;

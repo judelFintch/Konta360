@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Payments\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -23,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class InvoiceDeduction extends Model
 {
+    use BelongsToCompany;
+
     public $timestamps = false;
 
     protected function casts(): array

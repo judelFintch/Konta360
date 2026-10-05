@@ -36,7 +36,7 @@
         </div>
         <div>
             <x-input-label for="currency" value="Devise *" />
-            <select id="currency" name="currency" class="mt-1 block w-full rounded-md border-gray-300"><option value="CDF" @selected(old('currency', $asset?->currency ?? \App\Models\CompanySetting::current()->default_currency) === 'CDF')>CDF</option><option value="USD" @selected(old('currency', $asset?->currency ?? \App\Models\CompanySetting::current()->default_currency) === 'USD')>USD</option></select>
+            <select id="currency" name="currency" class="mt-1 block w-full rounded-md border-gray-300"><option value="CDF" @selected(old('currency', $asset?->currency ?? \App\Models\Company::current()->default_currency) === 'CDF')>CDF</option><option value="USD" @selected(old('currency', $asset?->currency ?? \App\Models\Company::current()->default_currency) === 'USD')>USD</option></select>
         </div>
     </div>
     <div

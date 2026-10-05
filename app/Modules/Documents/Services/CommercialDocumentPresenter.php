@@ -2,7 +2,7 @@
 
 namespace App\Modules\Documents\Services;
 
-use App\Models\CompanySetting;
+use App\Models\Company;
 use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Models\Quote;
@@ -42,7 +42,7 @@ class CommercialDocumentPresenter
         $verificationUrl = $verifiable ? $this->verificationUrl($document) : null;
 
         return [
-            'company' => CompanySetting::current(),
+            'company' => Company::current(),
             'fingerprint' => $verifiable ? $this->fingerprint($document) : null,
             'verificationUrl' => $verificationUrl,
             'qrCode' => $verificationUrl ? $this->qrCode($verificationUrl) : null,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Modules\Companies\Validation\CompanyRule;
 use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Parties\Enums\PartyType;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,7 +24,7 @@ class PartyRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('parties')->ignore($this->route('party')),
+                CompanyRule::unique('parties')->ignore($this->route('party')),
             ],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],

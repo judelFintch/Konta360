@@ -6,6 +6,8 @@ use App\Models\BankReconciliation;
 use App\Models\TreasuryAccount;
 use App\Models\TreasuryTransaction;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Companies\Enums\SequenceType;
+use App\Modules\Companies\Validation\CompanyRule;
 use App\Modules\Treasury\Enums\BankReconciliationStatus;
 use App\Modules\Treasury\Enums\TreasuryAccountType;
 use Illuminate\Http\RedirectResponse;
@@ -64,13 +66,13 @@ class BankReconciliationController extends Controller
     {
         $this->authorizeTreasury();
         $data = $request->validate([
-            'treasury_account_id' => ['required', 'integer', 'exists:treasury_accounts,id'],
+            'treasury_account_id' => ['required', 'integer', CompanyRule::exists('treasury_accounts')],
             'starts_on' => ['required', 'date'],
             'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
             'statement_opening_balance' => ['required', 'numeric'],
             'statement_closing_balance' => ['required', 'numeric'],
             'transactions' => ['nullable', 'array'],
-            'transactions.*' => ['integer', 'exists:treasury_transactions,id'],
+            'transactions.*' => ['integer', CompanyRule::exists('treasury_transactions')],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -121,7 +123,7 @@ class BankReconciliationController extends Controller
                 'completed_by' => auth()->id(),
             ]);
             $reconciliation->update([
-                'number' => sprintf('RAP-%s-%05d', $reconciliation->ends_on->format('Y'), $reconciliation->id),
+                'number' => SequenceType::BankReconciliation->nextNumber($reconciliation->ends_on),
             ]);
             $reconciliation->transactions()->attach($transactions->modelKeys());
 

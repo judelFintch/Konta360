@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\TreasuryAccount;
 use App\Models\TreasuryTransaction;
 use App\Modules\Accounting\Services\AccountingService;
+use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Payments\Enums\PaymentStatus;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
 use Illuminate\Validation\ValidationException;
@@ -37,7 +38,7 @@ class PaymentRecorder
             'recorded_by' => $userId,
         ]);
         $payment->update([
-            'number' => sprintf('REG-%s-%05d', $payment->payment_date->format('Y'), $payment->id),
+            'number' => SequenceType::Payment->nextNumber($payment->payment_date),
         ]);
         $this->accounting->postPayment($payment, $userId);
 
@@ -54,7 +55,7 @@ class PaymentRecorder
                 'source_id' => $payment->id,
                 'created_by' => $userId,
             ]);
-            $movement->update(['number' => sprintf('TRES-%s-%05d', $movement->transaction_date->format('Y'), $movement->id)]);
+            $movement->update(['number' => SequenceType::TreasuryTransaction->nextNumber($movement->transaction_date)]);
         }
 
         return $payment;

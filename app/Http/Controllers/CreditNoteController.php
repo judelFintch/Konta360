@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CompanySetting;
 use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\CreditNotes\Enums\CreditNoteStatus;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\InvoiceStatus;
@@ -119,7 +119,7 @@ class CreditNoteController extends Controller
                 'total' => round((float) collect($lines)->sum('total'), 2),
                 'created_by' => auth()->id(),
             ]);
-            $creditNote->update(['number' => CompanySetting::current()->documentNumber('credit_note', $creditNote->id, $creditNote->issue_date)]);
+            $creditNote->update(['number' => SequenceType::CreditNote->nextNumber($creditNote->issue_date)]);
             $creditNote->lines()->createMany($lines);
             $accounting->postCreditNote($creditNote, auth()->id());
 

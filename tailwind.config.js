@@ -14,6 +14,11 @@ export default {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
+            // Screen height, for pages that must fit without scrolling.
+            screens: {
+                short: { raw: '(max-height: 699px)' },
+                tall: { raw: '(min-height: 880px)' },
+            },
         },
     },
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class CreditNoteLine extends Model
 {
+    use BelongsToCompany;
+
     public $timestamps = false;
 
     protected function casts(): array

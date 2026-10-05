@@ -7,6 +7,7 @@ use App\Models\FixedAsset;
 use App\Models\FixedAssetDepreciation;
 use App\Models\Party;
 use App\Modules\Accounting\Services\AccountingService;
+use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\FixedAssets\Enums\AssetStatus;
 use App\Modules\FixedAssets\Services\DepreciationSchedule;
 use App\Modules\Parties\Enums\PartyType;
@@ -48,12 +49,16 @@ class FixedAssetController extends Controller
 
     public function store(FixedAssetRequest $request): RedirectResponse
     {
-        $asset = FixedAsset::create([
-            ...$request->validated(),
-            'status' => AssetStatus::Active,
-            'created_by' => auth()->id(),
-        ]);
-        $asset->update(['code' => sprintf('IMM-%s-%05d', $asset->in_service_date->format('Y'), $asset->id)]);
+        $asset = DB::transaction(function () use ($request) {
+            $asset = FixedAsset::create([
+                ...$request->validated(),
+                'status' => AssetStatus::Active,
+                'created_by' => auth()->id(),
+            ]);
+            $asset->update(['code' => SequenceType::FixedAsset->nextNumber($asset->in_service_date)]);
+
+            return $asset;
+        });
 
         return to_route('fixed-assets.show', $asset)->with('success', 'L’immobilisation a été créée.');
     }

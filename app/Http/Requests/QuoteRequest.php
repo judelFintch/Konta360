@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Modules\Companies\Validation\CompanyRule;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -18,7 +19,7 @@ class QuoteRequest extends FormRequest
         return [
             'party_id' => [
                 'required',
-                Rule::exists('parties', 'id')->where(fn (Builder $query) => $query->where('is_active', true)),
+                CompanyRule::exists('parties')->where(fn (Builder $query) => $query->where('is_active', true)),
             ],
             'issue_date' => ['required', 'date'],
             'valid_until' => ['required', 'date', 'after_or_equal:issue_date'],
@@ -28,7 +29,7 @@ class QuoteRequest extends FormRequest
             'lines.*.catalog_item_id' => [
                 'required',
                 'distinct',
-                Rule::exists('catalog_items', 'id')->where(fn (Builder $query) => $query->where('is_active', true)),
+                CompanyRule::exists('catalog_items')->where(fn (Builder $query) => $query->where('is_active', true)),
             ],
             'lines.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999999.999'],
             'lines.*.discount_rate' => ['required', 'numeric', 'min:0', 'max:100'],

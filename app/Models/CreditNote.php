@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use App\Modules\CreditNotes\Enums\CreditNoteStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class CreditNote extends Model
 {
+    use BelongsToCompany;
+
     protected function casts(): array
     {
         return [

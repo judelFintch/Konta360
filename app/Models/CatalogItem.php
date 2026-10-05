@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Modules\Catalog\Enums\ItemType;
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 class CatalogItem extends Model
 {
-    use HasFactory;
+    use BelongsToCompany, HasFactory;
 
     protected function casts(): array
     {

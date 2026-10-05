@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use App\Modules\Parties\Enums\PartyType;
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use App\Modules\Documents\Enums\DocumentLanguage;
+use App\Modules\Parties\Enums\PartyType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 class Party extends Model
 {
-    use HasFactory;
+    use BelongsToCompany, HasFactory;
 
     protected function casts(): array
     {

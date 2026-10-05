@@ -8,6 +8,8 @@ use App\Models\Journal;
 use App\Modules\Accounting\Enums\EntryStatus;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Companies\Enums\SequenceType;
+use App\Modules\Companies\Validation\CompanyRule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -65,12 +67,12 @@ class AccountingEntryController extends Controller
     {
         abort_unless(auth()->user()->can(Permission::AccountingEntriesCreate->value), 403);
         $data = $request->validate([
-            'journal_id' => ['required', 'integer', 'exists:journals,id'],
+            'journal_id' => ['required', 'integer', CompanyRule::exists('journals')],
             'entry_date' => ['required', 'date'],
             'label' => ['required', 'string', 'max:255'],
             'currency' => ['required', 'in:CDF,USD'],
             'lines' => ['required', 'array', 'min:2'],
-            'lines.*.account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'lines.*.account_id' => ['required', 'integer', CompanyRule::exists('accounts')],
             'lines.*.description' => ['required', 'string', 'max:255'],
             'lines.*.debit' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'lines.*.credit' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
@@ -104,7 +106,7 @@ class AccountingEntryController extends Controller
                 'status' => EntryStatus::Draft,
                 'created_by' => auth()->id(),
             ]);
-            $entry->update(['number' => sprintf('ECR-%s-%06d', $entry->entry_date->format('Y'), $entry->id)]);
+            $entry->update(['number' => SequenceType::AccountingEntry->nextNumber($entry->entry_date)]);
             $entry->lines()->createMany($lines->all());
 
             return $entry;

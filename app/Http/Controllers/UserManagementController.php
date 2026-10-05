@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
 use App\Models\User;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Administration\Enums\Role as RoleEnum;
+use App\Modules\Billing\Services\PlanLimits;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,7 +18,7 @@ class UserManagementController extends Controller
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('search'));
-        $users = User::query()->with('roles')
+        $users = User::query()->whereBelongsTo(Company::current())->with('roles')
             ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%");
             }))
@@ -30,7 +32,7 @@ class UserManagementController extends Controller
         return view('administration.users.create', ['roles' => RoleEnum::cases()]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, PlanLimits $limits): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -38,10 +40,12 @@ class UserManagementController extends Controller
             'password' => ['required', 'confirmed', 'min:8'],
             'role' => ['required', Rule::enum(RoleEnum::class)],
         ]);
-        $user = User::create([
+        $limits->ensureCanAddUser(Company::current());
+        $user = new User([
             'name' => $data['name'], 'email' => $data['email'], 'password' => $data['password'],
             'is_active' => true,
         ]);
+        $user->company()->associate(Company::current());
         $user->forceFill(['email_verified_at' => now()])->save();
         $user->assignRole($data['role']);
 
@@ -50,14 +54,17 @@ class UserManagementController extends Controller
 
     public function edit(User $user): View
     {
+        $this->ensureSameCompany($user);
+
         return view('administration.users.edit', [
             'managedUser' => $user->load('roles'),
             'roles' => RoleEnum::cases(),
         ]);
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(Request $request, User $user, PlanLimits $limits): RedirectResponse
     {
+        $this->ensureSameCompany($user);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user)],
@@ -71,6 +78,10 @@ class UserManagementController extends Controller
             ]);
         }
 
+        if ($data['is_active'] && ! $user->is_active) {
+            $limits->ensureCanAddUser(Company::current());
+        }
+
         $user->update([
             'name' => $data['name'],
             'email' => $data['email'],
@@ -80,5 +91,15 @@ class UserManagementController extends Controller
         $user->syncRoles([$data['role']]);
 
         return to_route('administration.users.index')->with('success', 'L’utilisateur a été mis à jour.');
+    }
+
+    /**
+     * Users carry no global scope (authentication needs to find them before
+     * any company is known), so an administrator only reaches the users of
+     * their own company through this check.
+     */
+    private function ensureSameCompany(User $user): void
+    {
+        abort_unless($user->company_id === Company::current()->id, 404);
     }
 }
