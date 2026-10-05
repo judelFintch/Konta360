@@ -13,17 +13,18 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans text-gray-900 antialiased">
-        <div class="flex min-h-screen bg-gray-50">
+        {{-- On desktop the page is exactly one screen high and never scrolls. --}}
+        <div class="flex min-h-dvh bg-gray-50 lg:h-dvh lg:overflow-hidden">
             {{-- What the company gets: hidden on small screens, where the form comes first. --}}
-            <aside class="relative hidden w-[42%] max-w-xl flex-col justify-between overflow-hidden bg-gradient-to-br from-indigo-700 via-indigo-600 to-violet-600 p-12 text-white lg:flex">
+            <aside class="relative hidden w-[38%] max-w-xl flex-col justify-between overflow-hidden bg-gradient-to-br from-indigo-700 via-indigo-600 to-violet-600 p-12 text-white short:p-8 lg:flex">
                 <div aria-hidden="true" class="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/10"></div>
                 <div aria-hidden="true" class="pointer-events-none absolute -bottom-32 -left-20 h-96 w-96 rounded-full bg-white/5"></div>
 
                 <a href="{{ url('/') }}" class="relative"><x-brand inverted /></a>
 
                 <div class="relative">
-                    <h1 class="text-3xl font-bold leading-tight">La facturation et la comptabilité de votre société, au même endroit.</h1>
-                    <ul class="mt-10 space-y-6">
+                    <h1 class="text-3xl font-bold leading-tight short:text-2xl">La facturation et la comptabilité de votre société, au même endroit.</h1>
+                    <ul class="mt-10 space-y-6 short:mt-6 short:space-y-4">
                         @foreach ([
                             ['Un mois d’évaluation gratuit', 'Sans moyen de paiement ni engagement. Vous choisissez ensuite votre formule.'],
                             ['Tous les modules inclus', 'Devis, factures, règlements, comptabilité, trésorerie, immobilisations et états financiers.'],
@@ -48,8 +49,8 @@
                 </p>
             </aside>
 
-            <main class="flex flex-1 items-start justify-center px-4 py-10 sm:px-8 lg:items-center">
-                <div class="w-full max-w-xl">
+            <main class="flex flex-1 items-start justify-center px-4 py-10 sm:px-8 lg:items-center lg:overflow-y-auto lg:py-6">
+                <div class="w-full max-w-xl lg:max-w-3xl">
                     <a href="{{ url('/') }}" class="mb-8 inline-block lg:hidden"><x-brand /></a>
                     {{ $slot }}
                 </div>
