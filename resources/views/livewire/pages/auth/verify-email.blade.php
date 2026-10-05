@@ -61,12 +61,14 @@ new #[Layout('layouts.showcase')] class extends Component
 }; ?>
 
 <div>
+    <x-mail-delivery-error />
+
     <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v12H4zM4 7l8 6 8-6"/></svg>
     </span>
     <h2 class="mt-5 text-2xl font-bold tracking-tight text-gray-900">Confirmez votre adresse e-mail</h2>
     <p class="mt-2 text-sm text-gray-500">
-        Votre espace est créé. Pour l’activer, saisissez le code à {{ \App\Modules\Authentication\Services\AuthenticationCodeService::LENGTH }} chiffres envoyé à
+        Votre espace est créé. Pour l’activer, demandez si nécessaire puis saisissez le code à {{ \App\Modules\Authentication\Services\AuthenticationCodeService::LENGTH }} chiffres destiné à
         <span class="font-medium text-gray-900">{{ auth()->user()->email }}</span>.
     </p>
 
@@ -90,7 +92,7 @@ new #[Layout('layouts.showcase')] class extends Component
     </form>
 
     <div class="mt-6 flex items-center justify-between text-sm">
-        <button type="button" wire:click="resend" class="font-medium text-indigo-600 hover:text-indigo-500">Renvoyer un code</button>
+        <button type="button" wire:click="resend" wire:loading.attr="disabled" class="font-medium text-indigo-600 hover:text-indigo-500"><span wire:loading.remove wire:target="resend">Renvoyer un code</span><span wire:loading wire:target="resend">Envoi en cours…</span></button>
         <button type="button" wire:click="logout" class="text-gray-500 hover:text-gray-700">Se déconnecter</button>
     </div>
 

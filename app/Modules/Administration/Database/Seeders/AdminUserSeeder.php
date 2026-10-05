@@ -9,8 +9,8 @@ use App\Modules\Companies\Services\CompanyProvisioner;
 use Illuminate\Database\Seeder;
 
 /**
- * Seeds the root administrator account (config('konta360.admin')) of the
- * first company and grants it the Administrateur role. Must run after
+ * Seeds the platform administrator with a temporary password and grants
+ * it the Administrateur role. Must run after
  * RolesAndPermissionsSeeder.
  */
 class AdminUserSeeder extends Seeder
@@ -27,8 +27,7 @@ class AdminUserSeeder extends Seeder
             ['name' => $admin['name'], 'password' => $admin['password']]
         );
         if (! $user->exists) {
-            $user->company()->associate($company);
-            $user->forceFill(['email_verified_at' => now()])->save();
+            $user->forceFill(['email_verified_at' => now(), 'is_platform_admin' => true, 'must_change_password' => true])->save();
         }
 
         $user->assignRole(RoleEnum::Administrateur->value);

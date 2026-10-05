@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use App\Modules\Billing\Enums\SubscriptionStatus;
+use App\Modules\Companies\Scopes\CompanyScope;
 use App\Modules\Companies\Services\CurrentCompany;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -62,6 +65,38 @@ class Company extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    /**
+     * Read from the platform area, where no company is current: the company
+     * scope is lifted, the foreign key already confines the rows.
+     */
+    public function subscriptionPayments(): HasMany
+    {
+        return $this->hasMany(SubscriptionPayment::class)->withoutGlobalScope(CompanyScope::class);
+    }
+
+    public function platformEvents(): HasMany
+    {
+        return $this->hasMany(PlatformEvent::class);
+    }
+
+    /**
+     * Same rules as subscriptionStatus(), in SQL, to filter lists.
+     */
+    #[Scope]
+    protected function withSubscriptionStatus(Builder $query, SubscriptionStatus $status): void
+    {
+        $today = today()->toDateString();
+        $paid = fn (Builder $query) => $query->whereNotNull('subscription_ends_at')->whereDate('subscription_ends_at', '>=', $today);
+        $trial = fn (Builder $query) => $query->whereNotNull('trial_ends_at')->whereDate('trial_ends_at', '>=', $today);
+
+        match ($status) {
+            SubscriptionStatus::Exempt => $query->where('billing_exempt', true),
+            SubscriptionStatus::Active => $query->where('billing_exempt', false)->where($paid),
+            SubscriptionStatus::Trial => $query->where('billing_exempt', false)->whereNot($paid)->where($trial),
+            SubscriptionStatus::Expired => $query->where('billing_exempt', false)->whereNot($paid)->whereNot($trial),
+        };
     }
 
     public function termsAcceptor(): BelongsTo

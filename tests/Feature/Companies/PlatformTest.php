@@ -20,8 +20,8 @@ beforeEach(function () {
 });
 
 it('sends platform administrators to the platform area only', function () {
-    $this->actingAs($this->operator)->get(route('dashboard'))->assertRedirect(route('platform.companies.index'));
-    $this->actingAs($this->operator)->get(route('invoices.index'))->assertRedirect(route('platform.companies.index'));
+    $this->actingAs($this->operator)->get(route('dashboard'))->assertRedirect(route('platform.dashboard'));
+    $this->actingAs($this->operator)->get(route('invoices.index'))->assertRedirect(route('platform.dashboard'));
 
     $this->actingAs($this->operator)->get(route('platform.companies.index'))
         ->assertOk()

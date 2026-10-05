@@ -89,6 +89,40 @@ class SubscriptionManager
     }
 
     /**
+     * The platform moves a company to another plan without payment, e.g.
+     * after a commercial agreement. Dates are unchanged.
+     */
+    public function changePlan(Company $company, Plan $plan): void
+    {
+        $company->plan()->associate($plan);
+        $company->save();
+    }
+
+    /**
+     * Adds days to the evaluation; an expired evaluation restarts today.
+     */
+    public function extendTrial(Company $company, int $days): void
+    {
+        $from = $company->trial_ends_at && $company->trial_ends_at->gte(today()) ? $company->trial_ends_at : today()->subDay();
+        $company->trial_ends_at = $from->copy()->addDays($days);
+        $company->save();
+    }
+
+    /**
+     * Money received directly by Konta360 (cash, transfer seen on the
+     * statement): recorded and confirmed in one step.
+     */
+    public function recordReceivedPayment(Company $company, Plan $plan, int $months, SubscriptionPaymentMethod $method, string $reference, User $operator): SubscriptionPayment
+    {
+        return DB::transaction(function () use ($company, $plan, $months, $method, $reference, $operator) {
+            $payment = $this->declarePayment($company, $plan, $months, $method, $reference, $operator);
+            $this->confirm($payment, $operator);
+
+            return $payment->refresh();
+        });
+    }
+
+    /**
      * Platform administrators have no current company: payments are read
      * across companies here, on purpose.
      */

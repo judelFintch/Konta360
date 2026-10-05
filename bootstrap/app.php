@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsureWritableSubscription;
 use App\Http\Middleware\RecordAuditLog;
+use App\Http\Middleware\RequirePasswordChange;
 use App\Http\Middleware\SetCurrentCompany;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            RequirePasswordChange::class,
             SetCurrentCompany::class,
             // Before the audit trail: a refused write is not recorded.
             EnsureWritableSubscription::class,

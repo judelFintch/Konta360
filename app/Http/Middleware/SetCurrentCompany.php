@@ -31,7 +31,7 @@ class SetCurrentCompany
             if ($user->is_platform_admin) {
                 return $request->routeIs('platform.*', 'legal.*', 'pricing', 'verification.*', 'password.*')
                     ? $next($request)
-                    : redirect()->route('platform.companies.index');
+                    : redirect()->route('platform.dashboard');
             }
 
             abort(403, 'Ce compte n’est rattaché à aucune société.');

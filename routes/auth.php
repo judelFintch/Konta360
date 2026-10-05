@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\InitialPasswordController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -23,6 +24,9 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('change-initial-password', [InitialPasswordController::class, 'edit'])->name('password.initial');
+    Route::post('change-initial-password', [InitialPasswordController::class, 'update'])->name('password.initial.update');
+
     Volt::route('verify-email', 'pages.auth.verify-email')
         ->name('verification.notice');
 

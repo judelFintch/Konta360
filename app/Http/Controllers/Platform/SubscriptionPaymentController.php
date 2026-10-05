@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
+use App\Models\PlatformEvent;
 use App\Models\SubscriptionPayment;
 use App\Modules\Billing\Enums\SubscriptionPaymentStatus;
 use App\Modules\Billing\Services\SubscriptionManager;
@@ -33,7 +34,9 @@ class SubscriptionPaymentController extends Controller
 
     public function confirm(Request $request, int $payment, SubscriptionManager $subscriptions): RedirectResponse
     {
-        $subscriptions->confirm($this->find($payment), $request->user());
+        $payment = $this->find($payment);
+        $subscriptions->confirm($payment, $request->user());
+        PlatformEvent::record($request->user(), $payment->company, 'payment_confirmed', "Paiement confirmé : {$payment->amount} {$payment->currency}, {$payment->months} mois", ['payment_id' => $payment->id]);
 
         return back()->with('success', 'Paiement confirmé : l’abonnement de la société est prolongé.');
     }
@@ -41,7 +44,9 @@ class SubscriptionPaymentController extends Controller
     public function reject(Request $request, int $payment, SubscriptionManager $subscriptions): RedirectResponse
     {
         $data = $request->validate(['rejection_reason' => ['required', 'string', 'min:3', 'max:255']]);
-        $subscriptions->reject($this->find($payment), $request->user(), $data['rejection_reason']);
+        $payment = $this->find($payment);
+        $subscriptions->reject($payment, $request->user(), $data['rejection_reason']);
+        PlatformEvent::record($request->user(), $payment->company, 'payment_rejected', "Paiement refusé : {$data['rejection_reason']}", ['payment_id' => $payment->id]);
 
         return back()->with('success', 'Paiement refusé.');
     }

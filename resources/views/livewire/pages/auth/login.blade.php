@@ -25,7 +25,12 @@ new #[Layout('layouts.showcase')] class extends Component
 
         try {
             $codes->send($user, AuthenticationCodePurpose::Login);
-        } catch (ValidationException) {
+        } catch (ValidationException $exception) {
+            if (isset($exception->errors()['mail'])) {
+                PendingLogin::forget();
+                throw $exception;
+            }
+
             // A code was sent less than a minute ago: it is still valid.
         }
 
@@ -34,6 +39,8 @@ new #[Layout('layouts.showcase')] class extends Component
 }; ?>
 
 <div>
+    <x-mail-delivery-error />
+
     <h2 class="text-2xl font-bold tracking-tight text-gray-900">Connexion</h2>
     <p class="mt-1 text-sm text-gray-500">Accédez à votre espace de gestion comptable.</p>
 

@@ -40,7 +40,19 @@ new #[Layout('layouts.register')] class extends Component
             Plan::evaluation(),
         );
 
-        event(new Registered($user));
+        try {
+            event(new Registered($user));
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            if (! isset($exception->errors()['mail'])) {
+                throw $exception;
+            }
+
+            Auth::login($user);
+            session()->flash('mail_error', $exception->errors()['mail'][0]);
+            $this->redirectRoute('verification.notice', navigate: true);
+
+            return;
+        }
 
         Auth::login($user);
 

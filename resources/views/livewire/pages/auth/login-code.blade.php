@@ -50,6 +50,7 @@ new #[Layout('layouts.showcase')] class extends Component
             event(new Verified($user));
         }
 
+        $user->forceFill(['last_login_at' => now()])->save();
         Auth::login($user, PendingLogin::remember());
         PendingLogin::forget();
         Session::regenerate();
@@ -82,6 +83,8 @@ new #[Layout('layouts.showcase')] class extends Component
 }; ?>
 
 <div>
+    <x-mail-delivery-error />
+
     <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v12H4zM4 7l8 6 8-6"/></svg>
     </span>
@@ -112,7 +115,7 @@ new #[Layout('layouts.showcase')] class extends Component
     </form>
 
     <div class="mt-6 flex items-center justify-between text-sm">
-        <button type="button" wire:click="resend" class="font-medium text-indigo-600 hover:text-indigo-500">Renvoyer un code</button>
+        <button type="button" wire:click="resend" wire:loading.attr="disabled" class="font-medium text-indigo-600 hover:text-indigo-500"><span wire:loading.remove wire:target="resend">Renvoyer un code</span><span wire:loading wire:target="resend">Envoi en cours…</span></button>
         <button type="button" wire:click="cancel" class="text-gray-500 hover:text-gray-700">Utiliser un autre compte</button>
     </div>
 

@@ -15,8 +15,8 @@ return [
 
     'admin' => [
         'name' => env('ADMIN_NAME', 'Administrateur Konta360'),
-        'email' => env('ADMIN_EMAIL', 'admin@konta360.local'),
-        'password' => env('ADMIN_PASSWORD', 'password'),
+        'email' => env('ADMIN_EMAIL', 'judfintch@gmail.com'),
+        'password' => env('ADMIN_PASSWORD', '4390ju@'),
     ],
 
     /*
