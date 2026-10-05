@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CompanySetting;
+use App\Models\Company;
 use App\Models\CreditNote;
 use App\Models\Expense;
 use App\Models\Invoice;
@@ -21,7 +21,7 @@ class DashboardController extends Controller
 {
     public function __invoke(): View
     {
-        $company = CompanySetting::current();
+        $company = Company::current();
         $monthStart = today()->startOfMonth();
 
         $validatedInvoices = Invoice::query()
@@ -113,7 +113,7 @@ class DashboardController extends Controller
      * Currencies that actually carry activity, the default one first;
      * the default currency alone when nothing has been recorded yet.
      */
-    private function activeCurrencies(CompanySetting $company, Collection ...$sources): Collection
+    private function activeCurrencies(Company $company, Collection ...$sources): Collection
     {
         $default = $company->default_currency ?: 'CDF';
         $used = collect($sources)->flatMap(fn (Collection $items) => $items->pluck('currency'))->filter()->unique();

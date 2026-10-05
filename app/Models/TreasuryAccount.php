@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use App\Modules\Treasury\Enums\TreasuryAccountType;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['name', 'type', 'currency', 'opening_balance', 'is_active', 'created_by'])]
 class TreasuryAccount extends Model
 {
+    use BelongsToCompany;
+
     protected function casts(): array
     {
         return [

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use App\Modules\Quotes\Enums\QuoteStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 ])]
 class Quote extends Model
 {
+    use BelongsToCompany;
+
     protected function casts(): array
     {
         return [

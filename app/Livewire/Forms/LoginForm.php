@@ -46,6 +46,14 @@ class LoginForm extends Form
             ]);
         }
 
+        if (Auth::user()->company?->isSuspended()) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'form.email' => __('L’accès de votre société est suspendu. Contactez le support Konta360.'),
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

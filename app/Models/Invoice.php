@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Invoices\Enums\InvoiceStatus;
@@ -34,6 +35,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class Invoice extends Model
 {
+    use BelongsToCompany;
+
     protected function casts(): array
     {
         return [

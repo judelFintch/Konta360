@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Modules\Companies\Validation\CompanyRule;
 use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Payments\Enums\PaymentMethod;
@@ -32,7 +33,7 @@ class InvoiceDraftRequest extends FormRequest
             // An advance has necessarily been received, at the latest on the invoice date.
             'deductions.*.received_on' => ["required_if:deductions.*.type,{$advance}", 'nullable', 'date', 'before_or_equal:issue_date', 'before_or_equal:today'],
             'deductions.*.payment_method' => ["required_if:deductions.*.type,{$advance}", 'nullable', Rule::enum(PaymentMethod::class)],
-            'deductions.*.treasury_account_id' => ['nullable', 'integer', 'exists:treasury_accounts,id'],
+            'deductions.*.treasury_account_id' => ['nullable', 'integer', CompanyRule::exists('treasury_accounts')],
             'deductions.*.reference' => ['nullable', 'string', 'max:255'],
         ];
     }

@@ -7,6 +7,8 @@ use App\Models\TreasuryTransaction;
 use App\Models\Payment;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Companies\Enums\SequenceType;
+use App\Modules\Companies\Validation\CompanyRule;
 use App\Modules\Treasury\Enums\TreasuryAccountType;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
 use App\Modules\Payments\Enums\PaymentStatus;
@@ -77,8 +79,8 @@ class TreasuryController extends Controller
     {
         $this->authorizeTreasury();
         $data = $request->validate([
-            'treasury_account_id' => ['required', 'integer', 'exists:treasury_accounts,id'],
-            'destination_account_id' => ['nullable', 'integer', 'exists:treasury_accounts,id', 'different:treasury_account_id'],
+            'treasury_account_id' => ['required', 'integer', CompanyRule::exists('treasury_accounts')],
+            'destination_account_id' => ['nullable', 'integer', CompanyRule::exists('treasury_accounts'), 'different:treasury_account_id'],
             'type' => ['required', Rule::enum(TreasuryTransactionType::class)],
             'transaction_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'min:0.01', 'max:999999999999.99'],
@@ -120,7 +122,7 @@ class TreasuryController extends Controller
                 'created_by' => auth()->id(),
             ]);
             $transaction->update([
-                'number' => sprintf('TRES-%s-%05d', $transaction->transaction_date->format('Y'), $transaction->id),
+                'number' => SequenceType::TreasuryTransaction->nextNumber($transaction->transaction_date),
             ]);
             $accounting->postTreasuryTransaction($transaction, auth()->id());
 
@@ -134,7 +136,7 @@ class TreasuryController extends Controller
     {
         $this->authorizeTreasury();
         $data = $request->validate([
-            'treasury_account_id' => ['required', 'integer', 'exists:treasury_accounts,id'],
+            'treasury_account_id' => ['required', 'integer', CompanyRule::exists('treasury_accounts')],
         ]);
 
         DB::transaction(function () use ($payment, $data) {
@@ -162,7 +164,7 @@ class TreasuryController extends Controller
                 'source_id' => $payment->id,
                 'created_by' => auth()->id(),
             ]);
-            $movement->update(['number' => sprintf('TRES-%s-%05d', $movement->transaction_date->format('Y'), $movement->id)]);
+            $movement->update(['number' => SequenceType::TreasuryTransaction->nextNumber($movement->transaction_date)]);
         });
 
         return back()->with('success', 'Le règlement historique a été affecté au compte de trésorerie.');

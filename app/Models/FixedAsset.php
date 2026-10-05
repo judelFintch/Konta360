@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Companies\Concerns\BelongsToCompany;
 use App\Modules\FixedAssets\Enums\AssetCategory;
 use App\Modules\FixedAssets\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class FixedAsset extends Model
 {
+    use BelongsToCompany;
+
     protected function casts(): array
     {
         return [

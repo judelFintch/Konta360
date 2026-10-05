@@ -15,6 +15,7 @@ use App\Models\Payment;
 use App\Models\TreasuryTransaction;
 use App\Modules\Accounting\Enums\EntryStatus;
 use App\Modules\Accounting\Enums\PeriodStatus;
+use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Payments\Enums\PaymentMethod;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
@@ -326,7 +327,7 @@ class AccountingService
             'posted_by' => $userId,
         ]);
 
-        $entry->update(['number' => sprintf('ECR-%s-%06d', $entry->entry_date->format('Y'), $entry->id)]);
+        $entry->update(['number' => SequenceType::AccountingEntry->nextNumber($entry->entry_date)]);
         $entry->lines()->createMany(collect($lines)->values()->map(fn (array $line, int $index) => [
             'position' => $index + 1,
             'account_id' => Account::where('code', $line['account_code'])->valueOrFail('id'),

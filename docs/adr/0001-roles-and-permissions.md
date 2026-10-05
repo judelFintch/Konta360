@@ -38,6 +38,12 @@ code en dur des vérifications sur un nom de rôle.
    - est idempotent (`findOrCreate` / `syncPermissions`), donc rejouable sans erreur.
 5. `DatabaseSeeder` appelle ce seeder et assigne le rôle `Administrateur` à l'utilisateur de test.
 
+> **Amendement (ADR 0002, 2026-10-05)** : Konta360 est désormais multi-sociétés. Le mode « teams »
+> reste désactivé : un utilisateur n'appartient qu'à une seule société, donc ses rôles ne valent que
+> pour elle, et les 4 rôles ci-dessous sont communs à toutes les sociétés. L'administrateur de la
+> plateforme n'est pas un rôle Spatie (`users.is_platform_admin`). Voir
+> [ADR 0002](0002-multi-societes.md) § 8.
+
 ## Matrice de permissions par rôle (provisoire)
 
 | Permission | Administrateur | Comptable | Direction | Commercial |

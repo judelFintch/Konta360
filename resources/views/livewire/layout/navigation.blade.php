@@ -25,7 +25,7 @@ new class extends Component
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" wire:navigate>
-                        @php $company = \App\Models\CompanySetting::current(); @endphp
+                        @php $company = \App\Models\Company::current(); @endphp
                         @if ($company->logo_path)
                             <img src="{{ route('administration.company.asset', 'logo') }}" alt="{{ $company->name }}" class="block h-9 w-auto max-w-[140px] object-contain">
                         @else

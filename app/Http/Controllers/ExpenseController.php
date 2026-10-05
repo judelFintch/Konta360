@@ -9,6 +9,8 @@ use App\Models\TreasuryAccount;
 use App\Models\TreasuryTransaction;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Companies\Enums\SequenceType;
+use App\Modules\Companies\Validation\CompanyRule;
 use App\Modules\Expenses\Enums\ExpenseStatus;
 use App\Modules\Parties\Enums\PartyType;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
@@ -48,7 +50,7 @@ class ExpenseController extends Controller
     {
         $this->require(Permission::AccountingEntriesCreate);
         $data = $request->validate([
-            'supplier_id' => ['nullable', 'integer', 'exists:parties,id'],
+            'supplier_id' => ['nullable', 'integer', CompanyRule::exists('parties')],
             'supplier_reference' => ['nullable', 'string', 'max:255'],
             'expense_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:expense_date'],
@@ -59,11 +61,15 @@ class ExpenseController extends Controller
         ]);
         $subtotal = round((float) $data['subtotal'], 2);
         $tax = round((float) $data['tax_total'], 2);
-        $expense = Expense::create([
-            ...$data, 'subtotal' => $subtotal, 'tax_total' => $tax, 'total' => $subtotal + $tax,
-            'status' => ExpenseStatus::Draft, 'created_by' => auth()->id(),
-        ]);
-        $expense->update(['number' => sprintf('DEP-%s-%05d', $expense->expense_date->format('Y'), $expense->id)]);
+        $expense = DB::transaction(function () use ($data, $subtotal, $tax) {
+            $expense = Expense::create([
+                ...$data, 'subtotal' => $subtotal, 'tax_total' => $tax, 'total' => $subtotal + $tax,
+                'status' => ExpenseStatus::Draft, 'created_by' => auth()->id(),
+            ]);
+            $expense->update(['number' => SequenceType::Expense->nextNumber($expense->expense_date)]);
+
+            return $expense;
+        });
 
         return to_route('expenses.show', $expense)->with('success', 'La dépense brouillon a été créée.');
     }
@@ -95,7 +101,7 @@ class ExpenseController extends Controller
     {
         $this->require(Permission::TreasuryManage);
         $data = $request->validate([
-            'treasury_account_id' => ['required', 'integer', 'exists:treasury_accounts,id'],
+            'treasury_account_id' => ['required', 'integer', CompanyRule::exists('treasury_accounts')],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'reference' => ['nullable', 'string', 'max:255'],
@@ -121,7 +127,7 @@ class ExpenseController extends Controller
                 ...$data, 'expense_id' => $expense->id, 'amount' => $amount,
                 'currency' => $expense->currency, 'created_by' => auth()->id(),
             ]);
-            $payment->update(['number' => sprintf('PAI-%s-%05d', $payment->payment_date->format('Y'), $payment->id)]);
+            $payment->update(['number' => SequenceType::ExpensePayment->nextNumber($payment->payment_date)]);
             $accounting->postExpensePayment($payment, auth()->id());
             $movement = TreasuryTransaction::create([
                 'treasury_account_id' => $account->id, 'type' => TreasuryTransactionType::Outflow,
@@ -130,7 +136,7 @@ class ExpenseController extends Controller
                 'reference' => $payment->reference, 'source_type' => 'expense_payment',
                 'source_id' => $payment->id, 'created_by' => auth()->id(),
             ]);
-            $movement->update(['number' => sprintf('TRES-%s-%05d', $movement->transaction_date->format('Y'), $movement->id)]);
+            $movement->update(['number' => SequenceType::TreasuryTransaction->nextNumber($movement->transaction_date)]);
             if ($expense->balanceDue() <= 0) {
                 $expense->update(['status' => ExpenseStatus::Paid]);
             }

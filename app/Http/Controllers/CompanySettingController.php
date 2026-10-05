@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CompanySetting;
+use App\Models\Company;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,7 +13,7 @@ class CompanySettingController extends Controller
 {
     public function edit(): View
     {
-        return view('administration.company-settings.edit', ['company' => CompanySetting::current()]);
+        return view('administration.company-settings.edit', ['company' => Company::current()]);
     }
 
     public function update(Request $request): RedirectResponse
@@ -50,7 +50,7 @@ class CompanySettingController extends Controller
             'invoice_footer' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $company = CompanySetting::current();
+        $company = Company::current();
         foreach (['logo', 'signature', 'stamp'] as $asset) {
             if (! $request->hasFile($asset)) {
                 continue;
@@ -59,19 +59,27 @@ class CompanySettingController extends Controller
             if ($company->{$pathColumn}) {
                 Storage::disk('public')->delete($company->{$pathColumn});
             }
-            $data[$pathColumn] = $request->file($asset)->store('company', 'public');
+            $data[$pathColumn] = $request->file($asset)->store($company->storageDirectory(), 'public');
         }
         unset($data['logo'], $data['signature'], $data['stamp']);
 
-        CompanySetting::query()->updateOrCreate(['id' => 1], $data);
+        $company->update($data);
 
         return back()->with('success', 'Les paramètres de l’entreprise ont été enregistrés.');
     }
 
+    /**
+     * Branding files of the current company only.
+     */
     public function asset(string $type): BinaryFileResponse
     {
+        return static::assetResponse(Company::current(), $type);
+    }
+
+    public static function assetResponse(Company $company, string $type): BinaryFileResponse
+    {
         abort_unless(in_array($type, ['logo', 'signature', 'stamp'], true), 404);
-        $path = CompanySetting::current()->{$type.'_path'};
+        $path = $company->{$type.'_path'};
         abort_unless($path && Storage::disk('public')->exists($path), 404);
 
         return response()->file(Storage::disk('public')->path($path));

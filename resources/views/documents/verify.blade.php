@@ -11,7 +11,7 @@
     <main class="mx-auto max-w-lg px-4 py-10">
         <div class="mb-6 flex items-center gap-3">
             @if($company->logo_path)
-                <img src="{{ route('documents.verify.logo') }}" alt="" class="h-12 w-auto max-w-[140px] object-contain">
+                <img src="{{ route('documents.verify.logo', $verification) }}" alt="" class="h-12 w-auto max-w-[140px] object-contain">
             @endif
             <div>
                 <p class="text-lg font-bold">{{ $company->name }}</p>

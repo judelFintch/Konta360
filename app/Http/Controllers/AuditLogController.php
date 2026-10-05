@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Company;
 use App\Models\User;
 use App\Modules\Administration\Enums\Permission;
 use Illuminate\Http\Request;
@@ -30,7 +31,7 @@ class AuditLogController extends Controller
             ->when($to, fn ($query) => $query->whereDate('created_at', '<=', $to))
             ->latest('id')->paginate(30)->withQueryString();
         $actions = AuditLog::query()->distinct()->orderBy('action')->pluck('action');
-        $users = User::query()->whereHas('auditLogs')->orderBy('name')->get();
+        $users = User::query()->whereBelongsTo(Company::current())->whereHas('auditLogs')->orderBy('name')->get();
 
         return view('audit-logs.index', compact('logs', 'actions', 'users', 'search', 'action', 'userId', 'from', 'to'));
     }

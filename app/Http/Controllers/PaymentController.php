@@ -9,6 +9,7 @@ use App\Models\TreasuryAccount;
 use App\Models\TreasuryTransaction;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
+use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Payments\Enums\PaymentStatus;
 use App\Modules\Payments\Services\PaymentRecorder;
@@ -113,7 +114,7 @@ class PaymentController extends Controller
                     'source_id' => $payment->id,
                     'created_by' => auth()->id(),
                 ]);
-                $movement->update(['number' => sprintf('TRES-%s-%05d', $movement->transaction_date->format('Y'), $movement->id)]);
+                $movement->update(['number' => SequenceType::TreasuryTransaction->nextNumber($movement->transaction_date)]);
             }
         });
 

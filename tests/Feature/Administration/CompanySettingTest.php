@@ -1,15 +1,16 @@
 <?php
 
-use App\Models\CompanySetting;
+use App\Models\Company;
 use App\Models\Invoice;
-use App\Models\InvoiceLine;
 use App\Models\Party;
 use App\Models\User;
 use App\Modules\Administration\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Administration\Enums\Role;
+use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Parties\Enums\PartyType;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -41,7 +42,7 @@ it('allows an administrator to update company settings', function () {
         ->assertSessionHasNoErrors()
         ->assertSessionHas('success');
 
-    expect(CompanySetting::current())
+    expect(Company::current()->refresh())
         ->name->toBe('Kivu Services SARL')
         ->default_currency->toBe('USD')
         ->invoice_footer->toBe('Merci pour votre confiance.');
@@ -50,7 +51,7 @@ it('allows an administrator to update company settings', function () {
 it('stores company branding assets on the public disk', function () {
     Storage::fake('public');
 
-    $data = CompanySetting::current()->only([
+    $data = Company::current()->only([
         'name', 'legal_form', 'tax_identifier', 'trade_register', 'address', 'email',
         'phone', 'website', 'default_currency', 'invoice_footer', 'default_tax_rate',
         'default_payment_days', 'default_quote_validity_days', 'quote_prefix',
@@ -63,7 +64,7 @@ it('stores company branding assets on the public disk', function () {
     $this->actingAs($this->admin)->put(route('administration.company.update'), $data)
         ->assertSessionHasNoErrors();
 
-    $company = CompanySetting::current();
+    $company = Company::current()->refresh();
     Storage::disk('public')->assertExists($company->logo_path);
     Storage::disk('public')->assertExists($company->signature_path);
     Storage::disk('public')->assertExists($company->stamp_path);
@@ -71,17 +72,20 @@ it('stores company branding assets on the public disk', function () {
 });
 
 it('builds configurable document numbers', function () {
-    $company = CompanySetting::current();
-    $company->forceFill([
+    Company::current()->forceFill([
         'quote_prefix' => 'OFF',
         'invoice_prefix' => 'INV',
         'credit_note_prefix' => 'CREDIT',
         'number_padding' => 7,
     ]);
+    $year = today()->format('Y');
 
-    expect($company->documentNumber('quote', 42, today()))->toBe('OFF-'.today()->format('Y').'-0000042')
-        ->and($company->documentNumber('invoice', 42, today()))->toBe('INV-'.today()->format('Y').'-0000042')
-        ->and($company->documentNumber('credit_note', 42, today()))->toBe('CREDIT-'.today()->format('Y').'-0000042');
+    DB::transaction(function () use ($year) {
+        expect(SequenceType::Quote->nextNumber(today()))->toBe("OFF-{$year}-0000001")
+            ->and(SequenceType::Invoice->nextNumber(today()))->toBe("INV-{$year}-0000001")
+            ->and(SequenceType::Invoice->nextNumber(today()))->toBe("INV-{$year}-0000002")
+            ->and(SequenceType::CreditNote->nextNumber(today()))->toBe("CREDIT-{$year}-0000001");
+    });
 });
 
 it('protects company settings with the proper permission', function () {
@@ -93,7 +97,7 @@ it('protects company settings with the proper permission', function () {
 });
 
 it('prints company legal details on commercial documents', function () {
-    CompanySetting::query()->update([
+    Company::query()->update([
         'name' => 'Konta Test SARL',
         'tax_identifier' => 'IMP-2026-001',
         'trade_register' => 'RCCM-LSH-001',

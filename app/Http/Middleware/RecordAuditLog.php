@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\AuditLog;
+use App\Modules\Companies\Services\CurrentCompany;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -15,6 +16,11 @@ class RecordAuditLog
         $response = $next($request);
 
         if (! $request->user() || ! in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            return $response;
+        }
+
+        // The audit trail belongs to a company; platform requests have none.
+        if (! app(CurrentCompany::class)->has()) {
             return $response;
         }
 

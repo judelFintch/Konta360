@@ -15,6 +15,7 @@ use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\TreasuryController;
@@ -30,8 +31,11 @@ Route::get('verification/{type}/{id}/{token}', DocumentVerificationController::c
     ->whereAlphaNumeric('token')
     ->middleware('throttle:30,1')
     ->name('documents.verify');
-Route::get('verification/logo', [CompanySettingController::class, 'asset'])
-    ->defaults('type', 'logo')
+Route::get('verification/{type}/{id}/{token}/logo', [DocumentVerificationController::class, 'logo'])
+    ->whereIn('type', ['quote', 'invoice', 'credit_note'])
+    ->whereNumber('id')
+    ->whereAlphaNumeric('token')
+    ->middleware('throttle:30,1')
     ->name('documents.verify.logo');
 
 Route::get('dashboard', DashboardController::class)
@@ -142,6 +146,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('exports/accounting-entries.csv', [ReportExportController::class, 'accountingEntries'])->name('exports.accounting-entries');
     Route::get('exports/treasury.csv', [ReportExportController::class, 'treasury'])->name('exports.treasury');
     Route::get('exports/audit.csv', [ReportExportController::class, 'audit'])->name('exports.audit');
+});
+
+Route::prefix('platform')->name('platform.')->middleware(['auth', 'verified', 'platform'])->group(function () {
+    Route::get('companies', [PlatformCompanyController::class, 'index'])->name('companies.index');
+    Route::patch('companies/{company}/suspend', [PlatformCompanyController::class, 'suspend'])->name('companies.suspend');
+    Route::patch('companies/{company}/reactivate', [PlatformCompanyController::class, 'reactivate'])->name('companies.reactivate');
+    Route::post('logout', [PlatformCompanyController::class, 'logout'])->name('logout');
 });
 
 require __DIR__.'/auth.php';
