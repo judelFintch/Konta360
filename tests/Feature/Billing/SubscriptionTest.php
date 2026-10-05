@@ -234,3 +234,32 @@ it('lets the platform grant complimentary access', function () {
     $this->actingAs($this->admin)->post(route('parties.store'), ['type' => 'customer', 'name' => 'Nouveau', 'is_active' => 1])
         ->assertSessionHasNoErrors();
 });
+
+it('does not sell the evaluation plan', function () {
+    $this->actingAs($this->admin)->post(route('subscription.payments.store'), [
+        'plan_id' => Plan::evaluation()->id, 'months' => 1, 'method' => 'cash', 'reference' => 'X',
+    ])->assertSessionHasErrors('plan_id');
+
+    $this->actingAs($this->admin)->get(route('subscription.show'))
+        ->assertOk()
+        ->assertDontSee('Évaluation — ');
+});
+
+it('explains every plan on the public pricing page, from the current plans', function () {
+    Plan::where('code', 'pro')->update(['monthly_price' => 42, 'max_users' => 7]);
+    Plan::where('code', 'entreprise')->update(['is_active' => false]);
+
+    $this->get(route('pricing'))
+        ->assertOk()
+        ->assertSeeInOrder(['Évaluation', 'Essentiel', 'Pro'])
+        ->assertSee('Gratuit')
+        ->assertSee('42 USD')
+        ->assertSee('Jusqu’à 7 utilisateurs actifs')
+        ->assertSee('Toutes les formules donnent accès à tous les modules')
+        ->assertDontSee('Entreprise</th>', false);
+});
+
+it('opens the pricing page to signed-in users and platform administrators', function () {
+    $this->actingAs($this->admin)->get(route('pricing'))->assertOk()->assertSee('Mon abonnement');
+    $this->actingAs($this->operator)->get(route('pricing'))->assertOk();
+});

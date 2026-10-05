@@ -31,8 +31,8 @@ return [
     */
 
     'billing' => [
+        // Length of the free evaluation plan every new company starts on.
         'trial_days' => (int) env('BILLING_TRIAL_DAYS', 30),
-        'default_plan' => env('BILLING_DEFAULT_PLAN', 'pro'),
         'payment_instructions' => [
             'mobile_money' => env('BILLING_MOBILE_MONEY'),
             'bank_transfer' => env('BILLING_BANK_ACCOUNT'),

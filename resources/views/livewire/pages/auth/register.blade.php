@@ -6,8 +6,6 @@ use App\Modules\Companies\Services\CompanyProvisioner;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules;
-use Illuminate\Validation\Rule;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -15,34 +13,21 @@ new #[Layout('layouts.guest')] class extends Component
 {
     public string $company_name = '';
     public string $default_currency = 'CDF';
-    public string $plan = '';
     public bool $terms = false;
     public string $name = '';
     public string $email = '';
     public string $password = '';
     public string $password_confirmation = '';
 
-    public function mount(): void
-    {
-        $this->plan = config('konta360.billing.default_plan');
-    }
-
-    #[Computed]
-    public function plans()
-    {
-        return Plan::query()->where('is_active', true)->orderBy('sort_order')->get();
-    }
-
     /**
-     * Creates a new company with its chart of accounts, its free trial and
-     * its first administrator (ADR 0002 § 9, ADR 0003 § 1).
+     * Creates a new company with its chart of accounts, its free evaluation
+     * month and its first administrator (ADR 0002 § 9, ADR 0003 § 1).
      */
     public function register(CompanyProvisioner $provisioner): void
     {
         $validated = $this->validate([
             'company_name' => ['required', 'string', 'max:255'],
             'default_currency' => ['required', 'in:CDF,USD'],
-            'plan' => ['required', Rule::exists('plans', 'code')->where('is_active', true)],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
@@ -52,7 +37,7 @@ new #[Layout('layouts.guest')] class extends Component
         [, $user] = $provisioner->register(
             ['name' => $validated['company_name'], 'default_currency' => $validated['default_currency']],
             ['name' => $validated['name'], 'email' => $validated['email'], 'password' => $validated['password']],
-            Plan::query()->where('code', $validated['plan'])->firstOrFail(),
+            Plan::evaluation(),
         );
 
         event(new Registered($user));
@@ -66,6 +51,11 @@ new #[Layout('layouts.guest')] class extends Component
 <div>
     <h2 class="text-2xl font-bold tracking-tight text-gray-900">Créer votre espace</h2>
     <p class="mt-1 text-sm text-gray-500">Votre société dispose de sa propre comptabilité et de ses propres utilisateurs.</p>
+    <p class="mt-4 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-800">
+        Évaluation gratuite d’un mois, avec tous les modules et sans engagement.
+        Vous choisirez ensuite la formule qui vous convient.
+        <a href="{{ route('pricing') }}" target="_blank" class="font-semibold underline">Voir les formules</a>
+    </p>
 
     <form wire:submit="register" class="mt-8 space-y-5">
         <fieldset class="space-y-5">
@@ -84,16 +74,6 @@ new #[Layout('layouts.guest')] class extends Component
                     <option value="USD">USD — Dollar américain</option>
                 </select>
                 <x-input-error :messages="$errors->get('default_currency')" class="mt-2" />
-            </div>
-            <div>
-                <x-input-label for="plan" value="Formule" />
-                <select wire:model="plan" id="plan" name="plan" class="mt-1 block w-full rounded-md border-gray-300 py-2.5 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                    @foreach ($this->plans as $option)
-                        <option value="{{ $option->code }}">{{ $option->name }} — {{ number_format((float) $option->monthly_price, 2, ',', ' ') }} {{ $option->currency }} / mois</option>
-                    @endforeach
-                </select>
-                <p class="mt-1 text-xs text-gray-500">{{ config('konta360.billing.trial_days') }} jours d’essai gratuit, sans engagement. Vous pourrez changer de formule à tout moment.</p>
-                <x-input-error :messages="$errors->get('plan')" class="mt-2" />
             </div>
         </fieldset>
 

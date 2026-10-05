@@ -13,7 +13,9 @@
             <div>
                 <p class="text-sm text-gray-500">Formule</p>
                 <p class="mt-1 text-xl font-semibold">{{ $company->plan?->name ?? '—' }}</p>
-                @if ($company->plan && ! $company->billing_exempt)
+                @if ($company->plan?->is_evaluation)
+                    <p class="text-sm text-gray-500">Gratuite, un mois. Choisissez ensuite une formule ci-dessous.</p>
+                @elseif ($company->plan && ! $company->billing_exempt)
                     <p class="text-sm text-gray-500">{{ $money($company->plan->monthly_price, $company->plan->currency) }} / mois</p>
                 @endif
             </div>
@@ -40,7 +42,10 @@
         @if (! $company->billing_exempt)
             @can(Permission::SettingsManage->value)
                 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
-                    <h2 class="text-lg font-semibold">Payer ou prolonger</h2>
+                    <div class="flex flex-wrap items-baseline justify-between gap-2">
+                        <h2 class="text-lg font-semibold">Payer ou prolonger</h2>
+                        <a href="{{ route('pricing') }}" target="_blank" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">Comparer les formules</a>
+                    </div>
                     <ol class="mt-3 list-inside list-decimal space-y-1 text-sm text-gray-600">
                         <li>Effectuez le paiement par l’un des moyens ci-dessous.</li>
                         <li>Déclarez-le avec sa référence (numéro de transaction mobile money ou de virement).</li>

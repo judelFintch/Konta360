@@ -29,7 +29,7 @@ class SubscriptionController extends Controller
         return view('subscription.show', [
             'company' => $company,
             'status' => $company->subscriptionStatus(),
-            'plans' => Plan::query()->where('is_active', true)->orderBy('sort_order')->get(),
+            'plans' => Plan::query()->purchasable()->get(),
             'payments' => SubscriptionPayment::query()->with(['plan', 'submitter'])->latest('id')->get(),
             'usage' => [
                 'users' => [$limits->activeUsers($company), $limits->limit($company, 'max_users')],
@@ -44,7 +44,7 @@ class SubscriptionController extends Controller
     {
         abort_unless($request->user()->can(Permission::SettingsManage->value), 403);
         $data = $request->validate([
-            'plan_id' => ['required', 'integer', Rule::exists('plans', 'id')->where('is_active', true)],
+            'plan_id' => ['required', 'integer', Rule::exists('plans', 'id')->where('is_active', 1)->where('is_evaluation', 0)],
             'months' => ['required', 'integer', Rule::in(self::DURATIONS)],
             'method' => ['required', Rule::enum(SubscriptionPaymentMethod::class)],
             'reference' => ['required', 'string', 'max:255'],

@@ -29,7 +29,7 @@ class SetCurrentCompany
             // Platform administrators belong to no company and only reach
             // the platform area.
             if ($user->is_platform_admin) {
-                return $request->routeIs('platform.*', 'legal.*', 'verification.*', 'password.*')
+                return $request->routeIs('platform.*', 'legal.*', 'pricing', 'verification.*', 'password.*')
                     ? $next($request)
                     : redirect()->route('platform.companies.index');
             }

@@ -73,6 +73,7 @@ new #[Layout('layouts.showcase')] class extends Component
     <p class="mt-8 text-center text-sm text-gray-500">
         Nouvelle société ?
         <a class="font-medium text-indigo-600 hover:text-indigo-500" href="{{ route('register') }}" wire:navigate>Créer votre espace</a>
+        · <a class="font-medium text-indigo-600 hover:text-indigo-500" href="{{ route('pricing') }}">Formules et tarifs</a>
     </p>
     <p class="mt-2 text-center text-xs text-gray-400">
         Vous rejoignez une société existante ? Demandez un compte à son administrateur.

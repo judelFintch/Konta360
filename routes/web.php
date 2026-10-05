@@ -19,6 +19,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
 use App\Http\Controllers\Platform\PlanController as PlatformPlanController;
 use App\Http\Controllers\Platform\SubscriptionPaymentController as PlatformSubscriptionPaymentController;
+use App\Http\Controllers\PricingController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\SubscriptionController;
@@ -42,6 +43,7 @@ Route::get('verification/{type}/{id}/{token}/logo', [DocumentVerificationControl
     ->middleware('throttle:30,1')
     ->name('documents.verify.logo');
 
+Route::get('tarifs', PricingController::class)->name('pricing');
 Route::view('legal/terms', 'legal.terms')->name('legal.terms');
 Route::view('legal/privacy', 'legal.privacy')->name('legal.privacy');
 

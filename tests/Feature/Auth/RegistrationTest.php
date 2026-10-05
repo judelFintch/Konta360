@@ -31,7 +31,6 @@ test('registering creates a provisioned company and its administrator', function
         ->set('email', 'test@example.com')
         ->set('password', 'password')
         ->set('password_confirmation', 'password')
-        ->set('plan', 'essentiel')
         ->set('terms', true);
 
     $component->call('register');
@@ -48,7 +47,7 @@ test('registering creates a provisioned company and its administrator', function
         ->and($company->id)->not->toBe(Company::query()->oldest('id')->value('id'))
         ->and($user->hasRole(Role::Administrateur->value))->toBeTrue()
         ->and($user->hasVerifiedEmail())->toBeFalse()
-        ->and($company->plan->code)->toBe('essentiel')
+        ->and($company->plan->is_evaluation)->toBeTrue()
         ->and($company->subscriptionStatus())->toBe(SubscriptionStatus::Trial)
         ->and($company->trial_ends_at->toDateString())->toBe(today()->addDays(29)->toDateString())
         ->and($company->hasAcceptedCurrentTerms())->toBeTrue()

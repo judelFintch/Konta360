@@ -29,12 +29,19 @@ Contraintes :
 - La table `plans` est commune à toutes les sociétés. Chaque formule a un code, un prix mensuel, une
   devise et deux limites : utilisateurs actifs et factures validées par mois. Une limite `null`
   signifie illimité. Les formules se modifient dans `/platform/plans`.
-- Trois formules sont créées par la migration, avec des **prix provisoires** :
+- Quatre formules sont créées par les migrations, avec des **prix et limites provisoires** :
+  - Évaluation : gratuite, 3 utilisateurs, 30 factures par mois ;
   - Essentiel : 15 USD, 2 utilisateurs, 50 factures par mois ;
   - Pro : 35 USD, 5 utilisateurs, 300 factures par mois ;
   - Entreprise : 75 USD, illimitée.
-- À l'inscription, la société choisit une formule et démarre un **essai gratuit** de
-  `konta360.billing.trial_days` jours (30), jour d'inscription compris (`companies.trial_ends_at`).
+- **Les formules ne diffèrent que par ces deux limites** : tous les modules sont inclus dans toutes
+  les formules. La page publique `/tarifs` l'explique, compare les formules et décrit le
+  fonctionnement des limites et des paiements. Elle est construite à partir de la table `plans`.
+- **Évaluation** (`plans.is_evaluation`) : toute nouvelle société démarre sur cette formule, gratuite,
+  pendant `konta360.billing.trial_days` jours (30), jour d'inscription compris
+  (`companies.trial_ends_at`). Elle n'est **pas achetable** (scope `Plan::purchasable()`). À la fin du
+  mois, la société paie une formule payante, sinon elle passe en lecture seule. Le choix d'une
+  formule à l'inscription a été retiré.
 - `Company::subscriptionStatus()` déduit le statut des dates, sans tâche planifiée : `Exempt`
   (accès offert), `Active` (jours payés), `Trial` (essai) ou `Expired`.
 - Les sociétés antérieures aux abonnements sont passées en **accès offert** (`billing_exempt`) sur la
@@ -124,7 +131,8 @@ sont, avec la page publique de vérification, les seuls contournements du scope 
 
 ## Validation requise
 
-- **Prix et limites** des trois formules, et devise de facturation (USD).
+- **Prix et limites** des quatre formules, y compris les limites de l'évaluation, et devise de
+  facturation (USD).
 - **Textes des CGU et de la politique de confidentialité**, à faire relire par un juriste au regard du
   droit congolais. Retirer ensuite le bandeau « Projet » de `resources/views/legal/layout.blade.php`.
 - **Durée de conservation** de 10 ans après clôture, à confirmer.

@@ -4,12 +4,15 @@
 
 @section('content')
     <h1 class="text-2xl font-bold">Formules</h1>
-    <p class="mt-1 text-sm text-gray-500">Laisser une limite vide la rend illimitée. Une formule désactivée n’est plus proposée, mais les sociétés qui l’ont la conservent.</p>
+    <p class="mt-1 text-sm text-gray-500"><a href="{{ route('pricing') }}" target="_blank" class="font-medium text-indigo-600">Voir la page publique des tarifs</a>. Laisser une limite vide la rend illimitée. Une formule désactivée n’est plus proposée, mais les sociétés qui l’ont la conservent.</p>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+    <div class="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         @foreach ($plans as $plan)
             <form method="POST" action="{{ route('platform.plans.update', $plan) }}" class="space-y-4 rounded-lg bg-white p-6 shadow">
                 @csrf @method('PUT')
+                @if ($plan->is_evaluation)
+                    <p class="rounded-md bg-emerald-50 p-2 text-xs text-emerald-800">Formule de départ de toute nouvelle société, gratuite et non achetable. Sa durée vient de BILLING_TRIAL_DAYS ; son prix n’est pas utilisé.</p>
+                @endif
                 <div class="flex items-start justify-between">
                     <p class="font-mono text-xs text-gray-500">{{ $plan->code }}</p>
                     <p class="text-xs text-gray-500">{{ $plan->companies_count }} société(s)</p>

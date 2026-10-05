@@ -17,8 +17,8 @@ class CompanyFactory extends Factory
         return [
             'name' => fake()->company(),
             'default_currency' => 'CDF',
-            // A company that just signed up: on trial.
-            'plan_id' => fn () => Plan::query()->where('code', 'pro')->value('id'),
+            // A company that just signed up: on its evaluation month.
+            'plan_id' => fn () => Plan::query()->where('is_evaluation', true)->value('id'),
             'trial_ends_at' => today()->addDays(29),
             'terms_version' => config('konta360.terms_version'),
             'terms_accepted_at' => now(),
