@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
+use App\Models\PlatformEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,6 +33,9 @@ class PlanController extends Controller
         ]);
 
         $plan->update($data);
+        if ($plan->wasChanged()) {
+            PlatformEvent::record($request->user(), null, 'plan_updated', "Formule {$plan->name} modifiée", $plan->getChanges());
+        }
 
         return back()->with('success', "La formule {$plan->name} a été mise à jour.");
     }

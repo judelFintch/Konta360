@@ -50,6 +50,7 @@ new #[Layout('layouts.showcase')] class extends Component
             event(new Verified($user));
         }
 
+        $user->forceFill(['last_login_at' => now()])->save();
         Auth::login($user, PendingLogin::remember());
         PendingLogin::forget();
         Session::regenerate();

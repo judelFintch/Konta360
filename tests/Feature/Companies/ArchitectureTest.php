@@ -3,6 +3,7 @@
 use App\Models\AuthenticationCode;
 use App\Models\Company;
 use App\Models\Plan;
+use App\Models\PlatformEvent;
 use App\Models\User;
 use App\Modules\Companies\Concerns\BelongsToCompany;
 use App\Modules\Companies\Services\CompanyDataExporter;
@@ -18,9 +19,9 @@ arch('every business model is confined to a company')
     ->expect('App\Models')
     ->toUseTrait(BelongsToCompany::class)
     // Not company data: the companies themselves, their users (see ADR 0002
-    // § 4), the subscription plans and the sign-in codes, which are used
-    // before any company is known (ADR 0004).
-    ->ignoring([Company::class, User::class, Plan::class, AuthenticationCode::class]);
+    // § 4), the subscription plans, the sign-in codes, which are used before
+    // any company is known (ADR 0004), and the platform's own log (ADR 0005).
+    ->ignoring([Company::class, User::class, Plan::class, AuthenticationCode::class, PlatformEvent::class]);
 
 it('uses no unscoped exists/unique validation rule on business tables', function () {
     $offenders = [];
@@ -47,7 +48,9 @@ it('uses no unscoped exists/unique validation rule on business tables', function
 it('exports and purges every table that holds company data', function () {
     $companyTables = collect(Schema::getTableListing(schemaQualified: false))
         ->filter(fn (string $table) => Schema::hasColumn($table, 'company_id'))
-        ->reject(fn (string $table) => $table === 'users')
+        // users: exported and purged separately; platform_events: the
+        // platform's log, never shown to the company, deleted with it.
+        ->reject(fn (string $table) => in_array($table, ['users', 'platform_events'], true))
         ->sort()->values()->all();
 
     expect(collect(CompanyDataExporter::TABLES)->sort()->values()->all())->toBe($companyTables);

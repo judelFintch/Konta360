@@ -17,6 +17,8 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Platform\CompanyController as PlatformCompanyController;
+use App\Http\Controllers\Platform\CompanySubscriptionController as PlatformCompanySubscriptionController;
+use App\Http\Controllers\Platform\DashboardController as PlatformDashboardController;
 use App\Http\Controllers\Platform\PlanController as PlatformPlanController;
 use App\Http\Controllers\Platform\SubscriptionPaymentController as PlatformSubscriptionPaymentController;
 use App\Http\Controllers\PricingController;
@@ -175,7 +177,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::prefix('platform')->name('platform.')->middleware(['auth', 'verified', 'platform'])->group(function () {
+    Route::get('/', PlatformDashboardController::class)->name('dashboard');
     Route::get('companies', [PlatformCompanyController::class, 'index'])->name('companies.index');
+    Route::get('companies/export.csv', [PlatformCompanyController::class, 'export'])->name('companies.export');
+    Route::get('companies/{company}', [PlatformCompanyController::class, 'show'])->name('companies.show');
+    Route::put('companies/{company}/notes', [PlatformCompanyController::class, 'updateNotes'])->name('companies.notes');
+    Route::patch('companies/{company}/plan', [PlatformCompanySubscriptionController::class, 'changePlan'])->name('companies.plan');
+    Route::patch('companies/{company}/trial', [PlatformCompanySubscriptionController::class, 'extendTrial'])->name('companies.trial');
+    Route::post('companies/{company}/payments', [PlatformCompanySubscriptionController::class, 'recordPayment'])->name('companies.payments.store');
+    Route::patch('companies/{company}/users/{user}/toggle', [PlatformCompanySubscriptionController::class, 'toggleUser'])->name('companies.users.toggle');
     Route::patch('companies/{company}/suspend', [PlatformCompanyController::class, 'suspend'])->name('companies.suspend');
     Route::patch('companies/{company}/reactivate', [PlatformCompanyController::class, 'reactivate'])->name('companies.reactivate');
     Route::patch('companies/{company}/exempt', [PlatformCompanyController::class, 'toggleExempt'])->name('companies.exempt');
