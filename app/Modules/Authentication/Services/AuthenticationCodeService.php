@@ -9,6 +9,7 @@ use App\Modules\Authentication\Enums\AuthenticationCodePurpose;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 /**
  * Eight-digit codes sent by email (ADR 0004). A code is valid for a few
@@ -39,8 +40,6 @@ class AuthenticationCodeService
             ]);
         }
 
-        $this->pending($user, $purpose)->update(['consumed_at' => now()]);
-
         $code = str_pad((string) random_int(0, 10 ** self::LENGTH - 1), self::LENGTH, '0', STR_PAD_LEFT);
         $record = new AuthenticationCode;
         $record->forceFill([
@@ -50,7 +49,20 @@ class AuthenticationCodeService
             'expires_at' => now()->addMinutes(self::TTL_MINUTES),
         ])->save();
 
-        Mail::to($user)->send(new AuthenticationCodeMail($user, $purpose, $code, self::TTL_MINUTES));
+        try {
+            Mail::to($user)->send(new AuthenticationCodeMail($user, $purpose, $code, self::TTL_MINUTES));
+        } catch (TransportExceptionInterface $exception) {
+            $record->delete();
+            report($exception);
+
+            $message = str_contains(strtolower($exception->getMessage()), 'invalid recipient domain')
+                ? 'Le domaine de votre adresse e-mail n’est pas reconnu par le serveur de messagerie. Vérifiez l’adresse saisie. Si elle est correcte, contactez le support.'
+                : 'Nous ne parvenons pas à envoyer votre code pour le moment. Réessayez dans quelques instants. Si le problème persiste, contactez le support.';
+
+            throw ValidationException::withMessages(['mail' => $message]);
+        }
+
+        $this->pending($user, $purpose)->where('id', '!=', $record->id)->update(['consumed_at' => now()]);
     }
 
     /**
