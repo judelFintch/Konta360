@@ -48,6 +48,42 @@ it('updates role status and password', function () {
         ->and(Hash::check('nouveau-secret', $user->password))->toBeTrue();
 });
 
+it('resets a user password and requires the user to change it at next login', function () {
+    $user = User::factory()->create(['must_change_password' => false]);
+
+    $this->actingAs($this->admin)->post(route('administration.users.password.reset', $user), [
+        'password' => 'Temporaire-2026!',
+        'password_confirmation' => 'Temporaire-2026!',
+    ])->assertRedirect(route('administration.users.edit', $user));
+
+    expect(Hash::check('Temporaire-2026!', $user->fresh()->password))->toBeTrue()
+        ->and($user->fresh()->must_change_password)->toBeTrue();
+
+    $this->actingAs($user->fresh())->get(route('dashboard'))
+        ->assertRedirect(route('password.initial'));
+});
+
+it('restricts password resets to administrators managing users in their company', function () {
+    $user = User::factory()->create();
+    $commercial = User::factory()->create();
+    $commercial->assignRole(Role::Commercial->value);
+
+    $this->actingAs($commercial)->post(route('administration.users.password.reset', $user), [
+        'password' => 'Temporaire-2026!',
+        'password_confirmation' => 'Temporaire-2026!',
+    ])->assertForbidden();
+
+    $otherCompanyUser = User::factory()->forCompany(\App\Models\Company::factory()->create())->create();
+
+    $this->actingAs($this->admin)->post(route('administration.users.password.reset', $otherCompanyUser), [
+        'password' => 'Temporaire-2026!',
+        'password_confirmation' => 'Temporaire-2026!',
+    ])->assertNotFound();
+
+    expect($user->fresh()->must_change_password)->toBeFalse()
+        ->and($otherCompanyUser->fresh()->must_change_password)->toBeFalse();
+});
+
 it('prevents an administrator from disabling or demoting their own account', function () {
     $this->actingAs($this->admin)->put(route('administration.users.update', $this->admin), [
         'name' => $this->admin->name,

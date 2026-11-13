@@ -10,6 +10,7 @@ use App\Modules\Billing\Services\PlanLimits;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -91,6 +92,23 @@ class UserManagementController extends Controller
         $user->syncRoles([$data['role']]);
 
         return to_route('administration.users.index')->with('success', 'L’utilisateur a été mis à jour.');
+    }
+
+    public function resetPassword(Request $request, User $user): RedirectResponse
+    {
+        $this->ensureSameCompany($user);
+
+        $data = $request->validate([
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $user->forceFill([
+            'password' => $data['password'],
+            'must_change_password' => true,
+        ])->save();
+
+        return to_route('administration.users.edit', $user)
+            ->with('success', 'Le mot de passe provisoire a été défini. L’utilisateur devra le changer à sa prochaine connexion.');
     }
 
     /**

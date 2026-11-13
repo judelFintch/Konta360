@@ -79,6 +79,9 @@ Route::resource('administration/users', UserManagementController::class)
     ->only(['index', 'create', 'store', 'edit', 'update'])
     ->middleware(['auth', 'verified', 'permission:'.Permission::UsersManage->value])
     ->names('administration.users');
+Route::post('administration/users/{user}/password', [UserManagementController::class, 'resetPassword'])
+    ->middleware(['auth', 'verified', 'permission:'.Permission::UsersManage->value, 'throttle:5,1'])
+    ->name('administration.users.password.reset');
 Route::get('administration/company', [CompanySettingController::class, 'edit'])
     ->middleware(['auth', 'verified', 'permission:'.Permission::SettingsManage->value])
     ->name('administration.company.edit');
