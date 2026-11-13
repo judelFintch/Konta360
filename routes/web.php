@@ -189,6 +189,9 @@ Route::prefix('platform')->name('platform.')->middleware(['auth', 'verified', 'p
     Route::patch('companies/{company}/trial', [PlatformCompanySubscriptionController::class, 'extendTrial'])->name('companies.trial');
     Route::post('companies/{company}/payments', [PlatformCompanySubscriptionController::class, 'recordPayment'])->name('companies.payments.store');
     Route::patch('companies/{company}/users/{user}/toggle', [PlatformCompanySubscriptionController::class, 'toggleUser'])->name('companies.users.toggle');
+    Route::post('companies/{company}/users/{user}/password', [PlatformCompanySubscriptionController::class, 'resetUserPassword'])
+        ->middleware('throttle:5,1')
+        ->name('companies.users.password.reset');
     Route::patch('companies/{company}/suspend', [PlatformCompanyController::class, 'suspend'])->name('companies.suspend');
     Route::patch('companies/{company}/reactivate', [PlatformCompanyController::class, 'reactivate'])->name('companies.reactivate');
     Route::patch('companies/{company}/exempt', [PlatformCompanyController::class, 'toggleExempt'])->name('companies.exempt');

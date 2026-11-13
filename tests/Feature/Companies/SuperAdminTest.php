@@ -111,6 +111,27 @@ it('deactivates a subscriber’s user, only within that company', function () {
     $this->actingAs($this->operator)->patch(route('platform.companies.users.toggle', [$this->trial, $this->admin]))->assertNotFound();
 });
 
+it('lets platform administrators reset a subscriber user password and logs the action', function () {
+    $this->actingAs($this->operator)->get(route('platform.companies.show', $this->paid))
+        ->assertOk()
+        ->assertSee('Réinitialiser');
+
+    $this->actingAs($this->operator)->post(route('platform.companies.users.password.reset', [$this->paid, $this->admin]), [
+        'temporary_password' => 'Temporaire-2026!',
+        'temporary_password_confirmation' => 'Temporaire-2026!',
+    ])->assertRedirect(route('platform.companies.show', $this->paid));
+
+    expect(\Illuminate\Support\Facades\Hash::check('Temporaire-2026!', $this->admin->fresh()->password))->toBeTrue()
+        ->and($this->admin->fresh()->must_change_password)->toBeTrue()
+        ->and(PlatformEvent::where('company_id', $this->paid->id)->where('action', 'user_password_reset')
+            ->where('actor_id', $this->operator->id)->exists())->toBeTrue();
+
+    $this->actingAs($this->operator)->post(route('platform.companies.users.password.reset', [$this->trial, $this->admin]), [
+        'temporary_password' => 'Autre-temp-2026!',
+        'temporary_password_confirmation' => 'Autre-temp-2026!',
+    ])->assertNotFound();
+});
+
 it('keeps internal notes', function () {
     $this->actingAs($this->operator)->put(route('platform.companies.notes', $this->paid), ['platform_notes' => 'Remise accordée en octobre.']);
 
@@ -126,7 +147,7 @@ it('logs suspensions with their author', function () {
 });
 
 it('keeps every super admin page and action away from company users', function (string $method, string $route) {
-    $parameters = str_contains($route, 'toggle') ? [$this->paid, $this->admin] : (str_contains($route, 'companies.') && ! str_ends_with($route, 'index') && ! str_ends_with($route, 'export') ? [$this->paid] : []);
+    $parameters = str_contains($route, 'companies.users.') ? [$this->paid, $this->admin] : (str_contains($route, 'companies.') && ! str_ends_with($route, 'index') && ! str_ends_with($route, 'export') ? [$this->paid] : []);
 
     $this->actingAs($this->admin)->call($method, route($route, $parameters))->assertForbidden();
 })->with([
@@ -139,6 +160,7 @@ it('keeps every super admin page and action away from company users', function (
     ['PATCH', 'platform.companies.trial'],
     ['POST', 'platform.companies.payments.store'],
     ['PATCH', 'platform.companies.users.toggle'],
+    ['POST', 'platform.companies.users.password.reset'],
 ]);
 
 it('records the last sign-in of a user', function () {

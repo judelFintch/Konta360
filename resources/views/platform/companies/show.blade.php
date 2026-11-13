@@ -166,7 +166,20 @@
                         @foreach ($company->users->sortBy('name') as $user)
                             <tr class="{{ $user->is_active ? '' : 'text-gray-400' }}">
                                 <td class="py-2 pr-4">
-                                    <p class="font-medium">{{ $user->name }}</p>
+                                    <div class="flex flex-wrap items-center gap-x-3">
+                                        <p class="font-medium">{{ $user->name }}</p>
+                                        <details class="text-xs">
+                                            <summary class="cursor-pointer font-medium text-indigo-600 hover:text-indigo-500">Réinitialiser</summary>
+                                            <form method="POST" action="{{ route('platform.companies.users.password.reset', [$company, $user]) }}" class="mt-2 grid min-w-64 gap-2 rounded-lg border border-gray-200 bg-white p-3 text-gray-700 shadow-sm">
+                                                @csrf
+                                                <label for="temporary_password_{{ $user->id }}">Mot de passe provisoire</label>
+                                                <input id="temporary_password_{{ $user->id }}" name="temporary_password" type="password" required autocomplete="new-password" class="rounded-md border-gray-300 text-sm">
+                                                <label for="temporary_password_confirmation_{{ $user->id }}">Confirmer le mot de passe</label>
+                                                <input id="temporary_password_confirmation_{{ $user->id }}" name="temporary_password_confirmation" type="password" required autocomplete="new-password" class="rounded-md border-gray-300 text-sm">
+                                                <button type="submit" class="justify-self-start font-semibold text-indigo-600 hover:text-indigo-500">Confirmer le reset</button>
+                                            </form>
+                                        </details>
+                                    </div>
                                     <p class="text-xs">{{ $user->email }}@unless ($user->hasVerifiedEmail()) · <span class="text-amber-600">adresse non confirmée</span>@endunless</p>
                                 </td>
                                 <td class="py-2 pr-4">{{ $user->roles->pluck('name')->implode(', ') ?: '—' }}</td>

@@ -12,6 +12,7 @@ use App\Modules\Billing\Services\SubscriptionManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * Subscription and access actions taken by an operator on one subscriber
@@ -80,5 +81,23 @@ class CompanySubscriptionController extends Controller
             ($user->is_active ? 'Utilisateur réactivé : ' : 'Utilisateur désactivé : ').$user->email);
 
         return back()->with('success', $user->is_active ? "{$user->email} est réactivé." : "{$user->email} est désactivé.");
+    }
+
+    public function resetUserPassword(Request $request, Company $company, User $user): RedirectResponse
+    {
+        abort_unless($user->company_id === $company->id, 404);
+
+        $data = $request->validate([
+            'temporary_password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $user->forceFill([
+            'password' => $data['temporary_password'],
+            'must_change_password' => true,
+        ])->save();
+        PlatformEvent::record($request->user(), $company, 'user_password_reset', 'Mot de passe réinitialisé pour '.$user->email);
+
+        return to_route('platform.companies.show', $company)
+            ->with('success', "Mot de passe provisoire défini pour {$user->email}. L’utilisateur devra le changer à sa prochaine connexion.");
     }
 }
