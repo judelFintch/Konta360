@@ -17,6 +17,17 @@
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
             <livewire:layout.navigation />
+            @if (auth()->user()?->is_platform_admin)
+                <div class="bg-amber-100 px-4 py-3 text-amber-950">
+                    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-sm">
+                        <p><strong>Mode assistance super-admin</strong> — {{ \App\Models\Company::current()->name }}. Vos actions sont journalisées.</p>
+                        <form method="POST" action="{{ route('platform.company-access.exit') }}">
+                            @csrf
+                            <button type="submit" class="rounded-md border border-amber-800 px-3 py-1.5 font-semibold hover:bg-amber-200">Quitter l’assistance</button>
+                        </form>
+                    </div>
+                </div>
+            @endif
             <x-subscription-banner />
 
             <!-- Page Heading -->

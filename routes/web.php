@@ -184,6 +184,8 @@ Route::prefix('platform')->name('platform.')->middleware(['auth', 'verified', 'p
     Route::get('companies', [PlatformCompanyController::class, 'index'])->name('companies.index');
     Route::get('companies/export.csv', [PlatformCompanyController::class, 'export'])->name('companies.export');
     Route::get('companies/{company}', [PlatformCompanyController::class, 'show'])->name('companies.show');
+    Route::post('companies/{company}/access', [PlatformCompanyController::class, 'enterCompany'])->name('companies.access');
+    Route::post('company-access/exit', [PlatformCompanyController::class, 'exitCompany'])->name('company-access.exit');
     Route::put('companies/{company}/notes', [PlatformCompanyController::class, 'updateNotes'])->name('companies.notes');
     Route::patch('companies/{company}/plan', [PlatformCompanySubscriptionController::class, 'changePlan'])->name('companies.plan');
     Route::patch('companies/{company}/trial', [PlatformCompanySubscriptionController::class, 'extendTrial'])->name('companies.trial');

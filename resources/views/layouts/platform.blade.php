@@ -42,6 +42,24 @@
         </div>
     </header>
 
+    @php
+        $supportCompany = app(\App\Modules\Companies\Services\PlatformCompanyAccess::class)->selectedCompany(request());
+    @endphp
+    @if ($supportCompany)
+        <div class="bg-amber-100 px-4 py-3 text-amber-950">
+            <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-sm">
+                <p><strong>Mode assistance actif</strong> — {{ $supportCompany->name }}. Les opérations métier restent soumises aux règles d’abonnement et de suspension.</p>
+                <div class="flex items-center gap-3">
+                    <a href="{{ route('dashboard') }}" class="font-semibold underline">Reprendre l’assistance</a>
+                    <form method="POST" action="{{ route('platform.company-access.exit') }}">
+                        @csrf
+                        <button type="submit" class="rounded-md border border-amber-800 px-3 py-1.5 font-semibold hover:bg-amber-200">Quitter l’assistance</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         @if (session('success'))
             <div class="mb-6 rounded-md bg-green-50 p-4 text-sm text-green-800">{{ session('success') }}</div>

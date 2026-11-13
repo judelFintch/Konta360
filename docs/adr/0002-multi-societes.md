@@ -153,9 +153,14 @@ grand numéro déjà émis pour ce type et cette année, quel que soit le préfi
   appartenir à plusieurs sociétés ou si une société doit définir ses propres rôles.
 - **Administrateur de la plateforme** : il est identifié par le booléen `users.is_platform_admin`,
   et non par un rôle Spatie, pour ne pas le mélanger aux permissions métier. Il n'a pas de société et
-  n'accède qu'à `/platform/companies` : liste des sociétés, administrateurs, nombre d'utilisateurs,
-  suspension et réactivation. Il n'a **aucun accès aux données comptables**. Il est créé en ligne de
-  commande : `php artisan konta360:platform-admin <email>`.
+  n'accède normalement qu'à l'espace `/platform`. Depuis la fiche d'une société, il peut ouvrir une
+  session d'assistance temporaire, limitée à cette société, avec les permissions métier complètes,
+  y compris la comptabilité. Un bandeau permet de quitter cette session ; les écritures du journal
+  d'audit identifient le super-admin et les événements de début et de fin sont consignés dans
+  `platform_events`. Les règles métier restent applicables : une société expirée est en lecture seule,
+  une société suspendue ou clôturée ne peut pas être ouverte. Hors de cette session, le super-admin
+  n'a aucun accès aux données métier. Il est créé en ligne de commande :
+  `php artisan konta360:platform-admin <email>`.
 - Une **société suspendue** (`companies.suspended_at`) voit ses utilisateurs déconnectés à la
   requête suivante et ne peut plus se connecter.
 

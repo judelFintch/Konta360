@@ -11,6 +11,7 @@ use App\Modules\Billing\Enums\SubscriptionPaymentMethod;
 use App\Modules\Billing\Enums\SubscriptionStatus;
 use App\Modules\Billing\Services\PlanLimits;
 use App\Modules\Companies\Services\CurrentCompany;
+use App\Modules\Companies\Services\PlatformCompanyAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,9 +20,8 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Konta360 operators follow and manage their subscribers (ADR 0005). They
- * see each company's identity, subscription, usage and users, never its
- * accounting data (ADR 0002 § 8).
+ * Konta360 operators follow and manage subscribers (ADR 0005). Tenant data
+ * remains unavailable outside an explicitly started, audited support session.
  */
 class CompanyController extends Controller
 {
@@ -61,6 +61,38 @@ class CompanyController extends Controller
             'purchasablePlans' => Plan::query()->purchasable()->get(),
             'methods' => SubscriptionPaymentMethod::cases(),
         ]);
+    }
+
+    public function enterCompany(Request $request, Company $company, PlatformCompanyAccess $access): RedirectResponse
+    {
+        if ($company->isSuspended() || $company->isClosed()) {
+            return to_route('platform.companies.show', $company)
+                ->withErrors(['support_access' => 'Une société suspendue ou clôturée ne peut pas être ouverte en mode assistance.']);
+        }
+
+        $previous = $access->selectedCompany($request);
+        if ($previous?->is($company)) {
+            return to_route('dashboard')->with('success', "Mode assistance ouvert pour « {$company->name} ».");
+        }
+
+        if ($previous) {
+            $access->end($request);
+            PlatformEvent::record($request->user(), $previous, 'support_access_ended', 'Fin de la session d’assistance.');
+        }
+
+        $access->begin($request, $company);
+        PlatformEvent::record($request->user(), $company, 'support_access_started', 'Ouverture d’une session d’assistance.');
+
+        return to_route('dashboard')->with('success', "Mode assistance ouvert pour « {$company->name} ».");
+    }
+
+    public function exitCompany(Request $request, PlatformCompanyAccess $access): RedirectResponse
+    {
+        if ($company = $access->end($request)) {
+            PlatformEvent::record($request->user(), $company, 'support_access_ended', 'Fin de la session d’assistance.');
+        }
+
+        return to_route('platform.dashboard')->with('success', 'Vous avez quitté le mode assistance.');
     }
 
     public function updateNotes(Request $request, Company $company): RedirectResponse

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Modules\Authentication\Enums\AuthenticationCodePurpose;
 use App\Modules\Authentication\Services\AuthenticationCodeService;
+use App\Modules\Companies\Services\PlatformCompanyAccess;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,7 +21,18 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable;
+    use HasFactory, HasRoles, Notifiable {
+        hasPermissionTo as protected hasPermissionToWithRoles;
+    }
+
+    public function hasPermissionTo($permission, ?string $guardName = null): bool
+    {
+        if (app(PlatformCompanyAccess::class)->grantsPermission($this, $permission)) {
+            return true;
+        }
+
+        return $this->hasPermissionToWithRoles($permission, $guardName);
+    }
 
     /**
      * Users are not filtered by a global scope: authentication must find a

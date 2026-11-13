@@ -39,9 +39,10 @@ Konta360.
    - des notes internes (`companies.platform_notes`) ;
    - l'historique des actions de la plateforme sur cette société.
 
-   **Aucune donnée comptable** n'y figure, conformément à l'ADR 0002 § 8. Le nombre de factures
-   validées dans le mois est le seul chiffre lu « en tant que » la société, et c'est un simple
-   comptage.
+   **Aucune donnée comptable** n'y figure. Depuis cette fiche, le super-admin peut toutefois démarrer
+   une session temporaire d'assistance complète, limitée à cette société. Le bandeau d'assistance
+   reste visible dans les espaces plateforme et société et permet de quitter la session. Les
+   protections d'abonnement, suspension et clôture restent applicables.
 4. **Actions** (`CompanySubscriptionController`) :
    - changer de formule, sans paiement ni changement de dates ;
    - prolonger l'évaluation ; une évaluation déjà expirée repart d'aujourd'hui ;
@@ -59,6 +60,8 @@ Konta360.
 ## Conséquences
 
 - Toute nouvelle action de la plateforme sur une société doit appeler `PlatformEvent::record()`.
+- L'ouverture et la fin d'une session d'assistance doivent être consignées dans `platform_events`.
+  Les écritures effectuées dans l'espace société gardent l'identité du super-admin dans `audit_logs`.
 - Les pages et actions du module sont réservées aux administrateurs de la plateforme (middleware
   `platform`). `SuperAdminTest` vérifie qu'un utilisateur de société reçoit 403 sur chacune
   d'elles.

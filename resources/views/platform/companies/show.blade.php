@@ -30,6 +30,12 @@
             </p>
         </div>
         <div class="flex flex-wrap gap-2">
+            @if (! $company->isSuspended() && ! $company->isClosed())
+                <form method="POST" action="{{ route('platform.companies.access', $company) }}">
+                    @csrf
+                    <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Entrer dans l’espace</button>
+                </form>
+            @endif
             @unless ($company->isClosed())
                 <form method="POST" action="{{ route('platform.companies.exempt', $company) }}">
                     @csrf @method('PATCH')

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\AuditLog;
 use App\Modules\Companies\Services\CurrentCompany;
+use App\Modules\Companies\Services\PlatformCompanyAccess;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -31,6 +32,16 @@ class RecordAuditLog
         $route = $request->route();
         $routeName = $route?->getName();
         $subject = collect($route?->parameters() ?? [])->first(fn ($parameter) => $parameter instanceof Model);
+        $metadata = [
+            'route_parameters' => collect($route?->parameters() ?? [])
+                ->map(fn ($value) => $value instanceof Model ? $value->getKey() : $value)
+                ->all(),
+        ];
+
+        if (app(PlatformCompanyAccess::class)->isActiveFor($request->user())) {
+            $metadata['platform_support_access'] = true;
+            $metadata['platform_actor_id'] = $request->user()->id;
+        }
 
         AuditLog::create([
             'user_id' => $request->user()->id,
@@ -42,11 +53,7 @@ class RecordAuditLog
             'description' => $this->description($routeName),
             'ip_address' => $request->ip(),
             'user_agent' => mb_substr((string) $request->userAgent(), 0, 1000),
-            'metadata' => [
-                'route_parameters' => collect($route?->parameters() ?? [])
-                    ->map(fn ($value) => $value instanceof Model ? $value->getKey() : $value)
-                    ->all(),
-            ],
+            'metadata' => $metadata,
         ]);
 
         return $response;
