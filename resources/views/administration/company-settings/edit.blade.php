@@ -52,7 +52,20 @@
             <h2 class="mb-6 text-lg font-semibold">Documents et visuels</h2>
             <div class="grid gap-6 sm:grid-cols-3">
                 @foreach(['logo' => 'Logo', 'signature' => 'Signature', 'stamp' => 'Cachet'] as $field => $label)
-                    <div><x-input-label :for="$field" :value="$label.' (PNG/JPG/WEBP, 2 Mo max)'" />@if($company->{$field.'_path'})<img src="{{ route('administration.company.asset', $field) }}" alt="{{ $label }}" class="my-3 h-20 max-w-full object-contain">@endif<input id="{{ $field }}" name="{{ $field }}" type="file" accept="image/png,image/jpeg,image/webp" class="mt-2 block w-full text-sm"><x-input-error :messages="$errors->get($field)" class="mt-2" /></div>
+                    <div>
+                        <x-input-label :for="$field" :value="$label.' (PNG/JPG/WEBP, 2 Mo max)'" />
+                        @if($company->{$field.'_path'})
+                            <img src="{{ route('administration.company.asset', $field) }}" alt="{{ $label }}" class="my-3 h-20 max-w-full object-contain">
+                        @endif
+                        <input id="{{ $field }}" name="{{ $field }}" type="file" accept="image/png,image/jpeg,image/webp" class="mt-2 block w-full text-sm">
+                        @if($field === 'logo' && $company->logo_path)
+                            <label for="remove_logo" class="mt-3 flex items-center gap-2 text-sm text-gray-700">
+                                <input id="remove_logo" name="remove_logo" type="checkbox" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                Supprimer le logo actuel
+                            </label>
+                        @endif
+                        <x-input-error :messages="$errors->get($field)" class="mt-2" />
+                    </div>
                 @endforeach
                 <div class="sm:col-span-3"><x-input-label for="invoice_footer" value="Mentions et conditions affichées sur les documents" /><textarea id="invoice_footer" name="invoice_footer" rows="4" class="mt-1 block w-full rounded-md border-gray-300" placeholder="Conditions, coordonnées de paiement ou mentions légales">{{ old('invoice_footer',$company->invoice_footer) }}</textarea></div>
             </div>

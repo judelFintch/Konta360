@@ -45,12 +45,20 @@ class CompanySettingController extends Controller
             'credit_note_prefix' => ['required', 'regex:/^[A-Z0-9-]+$/', 'max:20'],
             'number_padding' => ['required', 'integer', 'min:3', 'max:10'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'remove_logo' => ['sometimes', 'boolean'],
             'signature' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'stamp' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'invoice_footer' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $company = Company::current();
+        if ($request->boolean('remove_logo') && ! $request->hasFile('logo')) {
+            if ($company->logo_path) {
+                Storage::disk('public')->delete($company->logo_path);
+            }
+            $data['logo_path'] = null;
+        }
+
         foreach (['logo', 'signature', 'stamp'] as $asset) {
             if (! $request->hasFile($asset)) {
                 continue;
@@ -61,7 +69,7 @@ class CompanySettingController extends Controller
             }
             $data[$pathColumn] = $request->file($asset)->store($company->storageDirectory(), 'public');
         }
-        unset($data['logo'], $data['signature'], $data['stamp']);
+        unset($data['logo'], $data['remove_logo'], $data['signature'], $data['stamp']);
 
         $company->update($data);
 

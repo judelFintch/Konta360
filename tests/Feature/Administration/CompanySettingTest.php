@@ -71,6 +71,30 @@ it('stores company branding assets on the public disk', function () {
     $this->get(route('administration.company.asset', 'logo'))->assertOk();
 });
 
+it('allows an administrator to remove the company logo', function () {
+    Storage::fake('public');
+
+    $company = Company::current();
+    $logoPath = UploadedFile::fake()->image('logo.png')->store($company->storageDirectory(), 'public');
+    $company->forceFill(['logo_path' => $logoPath])->save();
+    $data = $company->only([
+        'name', 'legal_form', 'tax_identifier', 'trade_register', 'address', 'email',
+        'phone', 'website', 'default_currency', 'invoice_footer', 'default_tax_rate',
+        'default_payment_days', 'default_quote_validity_days', 'quote_prefix',
+        'invoice_prefix', 'credit_note_prefix', 'number_padding',
+    ]);
+    $data['remove_logo'] = '1';
+
+    $this->actingAs($this->admin)
+        ->put(route('administration.company.update'), $data)
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($company->refresh()->logo_path)->toBeNull();
+    Storage::disk('public')->assertMissing($logoPath);
+    $this->get(route('administration.company.asset', 'logo'))->assertNotFound();
+});
+
 it('builds configurable document numbers', function () {
     Company::current()->forceFill([
         'quote_prefix' => 'OFF',
