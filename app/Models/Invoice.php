@@ -129,6 +129,21 @@ class Invoice extends Model
         return $this->hasMany(CreditNote::class)->latest('issue_date')->latest('id');
     }
 
+    public function taxCorrections(): HasMany
+    {
+        return $this->hasMany(InvoiceTaxCorrection::class)->latest();
+    }
+
+    public function taxCorrectionBlocker(): ?string
+    {
+        return match (true) {
+            $this->status !== InvoiceStatus::Validated => 'Seule une facture validée peut faire l’objet d’une correction de TVA.',
+            $this->recordedPayments()->exists() => 'Cette facture comporte un règlement actif : sa TVA ne peut plus être corrigée directement.',
+            $this->creditNotes()->exists() => 'Un avoir existe déjà sur cette facture : sa TVA ne peut plus être corrigée directement.',
+            default => null,
+        };
+    }
+
     public function creditedAmount(): float
     {
         $creditNotes = $this->relationLoaded('creditNotes') ? $this->creditNotes : $this->creditNotes();

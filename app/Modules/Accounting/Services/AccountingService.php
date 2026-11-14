@@ -10,6 +10,7 @@ use App\Models\Expense;
 use App\Models\ExpensePayment;
 use App\Models\FixedAssetDepreciation;
 use App\Models\Invoice;
+use App\Models\InvoiceTaxCorrection;
 use App\Models\Journal;
 use App\Models\Payment;
 use App\Models\TreasuryTransaction;
@@ -202,6 +203,36 @@ class AccountingService
             $original->journal->code,
             now()->format('Y-m-d'),
             "Annulation de la facture {$invoice->number}",
+            $invoice->currency,
+            $lines,
+            $userId
+        );
+    }
+
+    public function postInvoiceTaxCorrection(Invoice $invoice, InvoiceTaxCorrection $correction, int $userId): ?AccountingEntry
+    {
+        $taxDifference = round((float) $correction->new_tax_total - (float) $correction->old_tax_total, 2);
+        $amount = abs($taxDifference);
+        if ($amount === 0.0) {
+            return null;
+        }
+
+        $lines = $taxDifference > 0
+            ? [
+                $this->line('411', "Correction TVA {$invoice->number}", $amount, 0),
+                $this->line('4431', "Correction TVA {$invoice->number}", 0, $amount),
+            ]
+            : [
+                $this->line('4431', "Correction TVA {$invoice->number}", $amount, 0),
+                $this->line('411', "Correction TVA {$invoice->number}", 0, $amount),
+            ];
+
+        return $this->post(
+            'invoice_tax_correction',
+            $correction->id,
+            'VE',
+            today()->format('Y-m-d'),
+            "Correction TVA facture {$invoice->number}",
             $invoice->currency,
             $lines,
             $userId

@@ -48,7 +48,7 @@ exige une isolation physique.
 
 `company_id` est ajouté à toutes les tables métier, y compris les tables de lignes :
 
-`parties`, `catalog_items`, `quotes`, `quote_lines`, `invoices`, `invoice_lines`,
+`parties`, `catalog_items`, `quotes`, `quote_lines`, `invoices`, `invoice_lines`, `invoice_tax_corrections`,
 `invoice_deductions`, `payments`, `credit_notes`, `credit_note_lines`, `accounts`, `journals`,
 `accounting_entries`, `accounting_entry_lines`, `accounting_periods`, `fixed_assets`,
 `fixed_asset_depreciations`, `treasury_accounts`, `treasury_transactions`, `bank_reconciliations`,

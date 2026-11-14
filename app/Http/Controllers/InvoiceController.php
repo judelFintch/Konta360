@@ -6,6 +6,7 @@ use App\Http\Requests\InvoiceDraftRequest;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceDeduction;
+use App\Models\InvoiceTaxCorrection;
 use App\Models\Quote;
 use App\Models\TreasuryAccount;
 use App\Models\User;
@@ -13,6 +14,7 @@ use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Billing\Services\PlanLimits;
 use App\Modules\Companies\Enums\SequenceType;
+use App\Modules\Companies\Services\PlatformCompanyAccess;
 use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\DeductionType;
@@ -68,7 +70,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): View
     {
         $this->requirePermission(Permission::InvoicesView);
-        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder', 'recordedPayments', 'creditNotes', 'deductions.payment']);
+        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder', 'recordedPayments', 'creditNotes', 'deductions.payment', 'taxCorrections.actor']);
         $presenter = app(CommercialDocumentPresenter::class);
         $verifiable = $presenter->isVerifiable($invoice);
 
@@ -187,6 +189,91 @@ class InvoiceController extends Controller
         });
 
         return to_route('invoices.show', $invoice)->with('success', 'La facture brouillon a été mise à jour.');
+    }
+
+    public function correctTax(Request $request, Invoice $invoice, AccountingService $accounting, PlatformCompanyAccess $supportAccess): RedirectResponse
+    {
+        abort_unless($supportAccess->isActiveFor($request->user()), 403);
+        $this->requirePermission(Permission::InvoicesUpdateDraft);
+
+        $data = $request->validate([
+            'tax_rates' => ['required', 'array', 'min:1'],
+            'tax_rates.*' => ['required', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
+            'reason' => ['required', 'string', 'max:2000'],
+        ]);
+
+        DB::transaction(function () use ($invoice, $data, $accounting, $request) {
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            if ($blocker = $invoice->taxCorrectionBlocker()) {
+                throw ValidationException::withMessages(['tax_rates' => $blocker]);
+            }
+
+            $lines = $invoice->lines()->lockForUpdate()->get();
+            $taxRates = collect($data['tax_rates'])
+                ->mapWithKeys(fn ($rate, $lineId) => [(int) $lineId => (float) $rate]);
+            $lineIds = $lines->modelKeys();
+            if ($taxRates->count() !== count($lineIds) || $taxRates->keys()->sort()->values()->all() !== collect($lineIds)->sort()->values()->all()) {
+                throw ValidationException::withMessages(['tax_rates' => 'Les taux doivent être renseignés pour chaque ligne de cette facture uniquement.']);
+            }
+
+            $oldTaxTotal = (float) $invoice->tax_total;
+            $oldTotal = (float) $invoice->total;
+            $lineChanges = [];
+            $newTaxTotal = 0.0;
+
+            foreach ($lines as $line) {
+                $taxRate = $taxRates->get($line->id);
+                $taxableAmount = round((float) $line->subtotal - (float) $line->discount_amount, 2);
+                $taxAmount = round($taxableAmount * $taxRate / 100, 2);
+                $newTaxTotal += $taxAmount;
+                $lineChanges[] = [
+                    'invoice_line_id' => $line->id,
+                    'description' => $line->description,
+                    'old_tax_rate' => (float) $line->tax_rate,
+                    'new_tax_rate' => $taxRate,
+                    'old_tax_amount' => (float) $line->tax_amount,
+                    'new_tax_amount' => $taxAmount,
+                ];
+            }
+
+            $newTaxTotal = round($newTaxTotal, 2);
+            $newTotal = round((float) $invoice->subtotal - (float) $invoice->discount_total + $newTaxTotal, 2);
+            $hasLineChanges = collect($lineChanges)->contains(fn (array $change) => abs($change['new_tax_rate'] - $change['old_tax_rate']) >= 0.005);
+            if (! $hasLineChanges) {
+                throw ValidationException::withMessages(['tax_rates' => 'La correction demandée ne change aucun taux de TVA.']);
+            }
+
+            $correction = InvoiceTaxCorrection::create([
+                'invoice_id' => $invoice->id,
+                'created_by' => $request->user()->id,
+                'old_tax_total' => $oldTaxTotal,
+                'new_tax_total' => $newTaxTotal,
+                'old_total' => $oldTotal,
+                'new_total' => $newTotal,
+                'line_changes' => $lineChanges,
+                'reason' => trim($data['reason']),
+            ]);
+
+            foreach ($lines as $line) {
+                $taxRate = $taxRates->get($line->id);
+                $taxableAmount = round((float) $line->subtotal - (float) $line->discount_amount, 2);
+                $taxAmount = round($taxableAmount * $taxRate / 100, 2);
+                $line->update([
+                    'tax_rate' => $taxRate,
+                    'tax_amount' => $taxAmount,
+                    'total' => round($taxableAmount + $taxAmount, 2),
+                ]);
+            }
+
+            $invoice->update([
+                'tax_total' => $newTaxTotal,
+                'total' => $newTotal,
+            ]);
+            $accounting->postInvoiceTaxCorrection($invoice, $correction, $request->user()->id);
+            $request->attributes->set('invoice_tax_correction_id', $correction->id);
+        });
+
+        return to_route('invoices.show', $invoice)->with('success', 'La TVA de la facture a été corrigée et l’ajustement comptable enregistré.');
     }
 
     /**

@@ -42,7 +42,10 @@ Konta360.
    **Aucune donnée comptable** n'y figure. Depuis cette fiche, le super-admin peut toutefois démarrer
    une session temporaire d'assistance complète, limitée à cette société. Le bandeau d'assistance
    reste visible dans les espaces plateforme et société et permet de quitter la session. Les
-   protections d'abonnement, suspension et clôture restent applicables.
+   protections d'abonnement, suspension et clôture restent applicables. En assistance, un super-admin
+   peut corriger uniquement les taux de TVA d'une facture validée qui n'a aucun règlement actif ni
+   avoir. La correction conserve le numéro et l'historique de la facture, enregistre l'auteur, le
+   motif et les anciennes/nouvelles valeurs, puis comptabilise l'écart à la date courante.
 4. **Actions** (`CompanySubscriptionController`) :
    - changer de formule, sans paiement ni changement de dates ;
    - prolonger l'évaluation ; une évaluation déjà expirée repart d'aujourd'hui ;
@@ -62,6 +65,8 @@ Konta360.
 - Toute nouvelle action de la plateforme sur une société doit appeler `PlatformEvent::record()`.
 - L'ouverture et la fin d'une session d'assistance doivent être consignées dans `platform_events`.
   Les écritures effectuées dans l'espace société gardent l'identité du super-admin dans `audit_logs`.
+- Les corrections de TVA sur facture sont des données de la société, incluses dans son export et
+  supprimées avec elle après la période de conservation légale.
 - Les pages et actions du module sont réservées aux administrateurs de la plateforme (middleware
   `platform`). `SuperAdminTest` vérifie qu'un utilisateur de société reçoit 403 sur chacune
   d'elles.

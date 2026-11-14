@@ -22,7 +22,7 @@ class CompanyDataExporter
      * Business tables, in an order a reader can follow.
      */
     public const TABLES = [
-        'parties', 'catalog_items', 'quotes', 'quote_lines', 'invoices', 'invoice_lines',
+        'parties', 'catalog_items', 'quotes', 'quote_lines', 'invoices', 'invoice_lines', 'invoice_tax_corrections',
         'invoice_deductions', 'credit_notes', 'credit_note_lines', 'payments', 'expenses',
         'expense_payments', 'treasury_accounts', 'treasury_transactions', 'bank_reconciliations',
         'accounts', 'journals', 'accounting_entries', 'accounting_entry_lines', 'accounting_periods',

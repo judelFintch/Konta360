@@ -9,6 +9,8 @@
     $isDraft = $invoice->status === InvoiceStatus::Draft;
     $isValidated = $invoice->status === InvoiceStatus::Validated;
     $isCancelled = $invoice->status === InvoiceStatus::Cancelled;
+    $supportTaxCorrection = app(\App\Modules\Companies\Services\PlatformCompanyAccess::class)->isActiveFor(auth()->user());
+    $taxCorrectionBlocker = $invoice->taxCorrectionBlocker();
     $paid = $invoice->paidAmount();
     $credited = $invoice->creditedAmount();
     $offset = $invoice->offsetAmount();
@@ -32,6 +34,13 @@
             'rank' => 3,
             'label' => 'Avoir émis · '.$money($note->total).' '.$note->currency,
             'detail' => $note->number,
+            'color' => 'bg-amber-500',
+        ]))
+        ->merge($invoice->taxCorrections->map(fn ($correction) => [
+            'date' => $correction->created_at,
+            'rank' => 2,
+            'label' => 'TVA corrigée · '.$money($correction->old_tax_total).' → '.$money($correction->new_tax_total),
+            'detail' => $correction->actor?->name.' · '.$correction->reason,
             'color' => 'bg-amber-500',
         ]))
         // Chronological order by day; within a day, the business sequence.
@@ -270,6 +279,43 @@
                             @endif
                         @endif
                     </article>
+
+                    @if ($supportTaxCorrection && $isValidated)
+                        <article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-amber-200">
+                            <h2 class="font-semibold text-gray-900">Correction de la TVA</h2>
+                            @if ($taxCorrectionBlocker)
+                                <p class="mt-2 text-sm text-gray-600">{{ $taxCorrectionBlocker }}</p>
+                            @else
+                                <p class="mt-2 text-sm text-gray-600">Réservé au super-admin en assistance. La correction ajuste la comptabilité à la date du jour et conserve l’historique de la modification. Réimprimez la facture corrigée : les copies précédentes afficheront les anciens montants.</p>
+                                <form method="POST" action="{{ route('invoices.tax-correction', $invoice) }}" class="mt-4 space-y-4"
+                                      onsubmit="return confirm('Confirmer la correction des taux de TVA de cette facture validée ?')">
+                                    @csrf
+                                    @method('PATCH')
+                                    <div class="space-y-3">
+                                        @foreach ($invoice->lines as $line)
+                                            <div>
+                                                <label for="tax_rate_{{ $line->id }}" class="block text-sm font-medium text-gray-700">{{ $line->description }}</label>
+                                                <div class="mt-1 flex items-center gap-2">
+                                                    <input id="tax_rate_{{ $line->id }}" name="tax_rates[{{ $line->id }}]" type="number" min="0" max="100" step="0.01" value="{{ $line->tax_rate }}" required
+                                                           class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                    <span class="text-sm text-gray-500">%</span>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <div>
+                                        <label for="tax_correction_reason" class="block text-sm font-medium text-gray-700">Motif de la correction *</label>
+                                        <textarea id="tax_correction_reason" name="reason" rows="2" required maxlength="2000"
+                                                  class="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                                  placeholder="Ex. article configuré par erreur avec TVA">{{ old('reason') }}</textarea>
+                                        <x-input-error :messages="$errors->get('reason')" class="mt-2" />
+                                    </div>
+                                    <x-input-error :messages="$errors->get('tax_rates')" class="mt-2" />
+                                    <button type="submit" class="w-full rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-500">Enregistrer la correction TVA</button>
+                                </form>
+                            @endif
+                        </article>
+                    @endif
 
                     @include('documents._party-card', ['party' => $invoice->party])
 
