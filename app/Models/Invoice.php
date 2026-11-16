@@ -129,6 +129,11 @@ class Invoice extends Model
         return $this->hasMany(CreditNote::class)->latest('issue_date')->latest('id');
     }
 
+    public function labelCorrections(): HasMany
+    {
+        return $this->hasMany(InvoiceLabelCorrection::class)->latest();
+    }
+
     public function taxCorrections(): HasMany
     {
         return $this->hasMany(InvoiceTaxCorrection::class)->latest();

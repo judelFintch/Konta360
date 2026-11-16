@@ -282,6 +282,30 @@
 
                     @if ($supportTaxCorrection && $isValidated)
                         <article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-amber-200">
+                            <h2 class="font-semibold text-gray-900">Corriger les libellés</h2>
+                            <p class="mt-2 text-sm text-gray-600">Réservé au super-admin en assistance. Le numéro, la validation, les montants et les écritures comptables sont conservés. Réimprimez la facture après correction et transmettez la version corrigée au client.</p>
+                            <form method="POST" action="{{ route('invoices.label-correction', $invoice) }}" class="mt-4 space-y-4">
+                                @csrf
+                                @method('PATCH')
+                                @foreach ($invoice->lines as $line)
+                                    <div>
+                                        <label for="description_{{ $line->id }}" class="block text-sm font-medium text-gray-700">Libellé — ligne {{ $line->position }}</label>
+                                        <input type="hidden" name="original_descriptions[{{ $line->id }}]" value="{{ old('original_descriptions.'.$line->id, $line->description) }}">
+                                        <textarea id="description_{{ $line->id }}" name="descriptions[{{ $line->id }}]" required maxlength="2000" class="mt-1 block w-full rounded-md border-gray-300 text-sm">{{ old('descriptions.'.$line->id, $line->description) }}</textarea>
+                                        <x-input-error :messages="$errors->get('descriptions.'.$line->id)" class="mt-2" />
+                                    </div>
+                                @endforeach
+                                <x-input-error :messages="$errors->get('descriptions')" class="mt-2" />
+                                <label for="label_correction_reason" class="block text-sm font-medium text-gray-700">Motif de la correction *</label>
+                                <textarea id="label_correction_reason" name="label_correction_reason" required maxlength="2000" class="block w-full rounded-md border-gray-300 text-sm">{{ old('label_correction_reason') }}</textarea>
+                                <x-input-error :messages="$errors->get('label_correction_reason')" class="mt-2" />
+                                <button class="w-full rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-500">Enregistrer les libellés corrigés</button>
+                            </form>
+                        </article>
+                    @endif
+
+                    @if ($supportTaxCorrection && $isValidated)
+                        <article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-amber-200">
                             <h2 class="font-semibold text-gray-900">Correction de la TVA</h2>
                             @if ($taxCorrectionBlocker)
                                 <p class="mt-2 text-sm text-gray-600">{{ $taxCorrectionBlocker }}</p>
@@ -320,6 +344,21 @@
                     @include('documents._party-card', ['party' => $invoice->party])
 
                     @include('documents._control-card')
+
+                    @if ($invoice->labelCorrections->isNotEmpty())
+                        <article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+                            <h2 class="font-semibold text-gray-900">Historique des corrections de libellés</h2>
+                            @foreach ($invoice->labelCorrections as $correction)
+                                <div class="mt-4 text-sm text-gray-700">
+                                    <p>{{ $correction->created_at->format('d/m/Y H:i') }} · {{ $correction->actor?->name }}</p>
+                                    <p>{{ $correction->reason }}</p>
+                                    @foreach ($correction->line_changes as $change)
+                                        <p class="mt-2 break-words">{{ $change['old_description'] }} → {{ $change['new_description'] }}</p>
+                                    @endforeach
+                                </div>
+                            @endforeach
+                        </article>
+                    @endif
 
                     {{-- Historique --}}
                     <article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">

@@ -6,6 +6,7 @@ use App\Http\Requests\InvoiceDraftRequest;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceDeduction;
+use App\Models\InvoiceLabelCorrection;
 use App\Models\InvoiceTaxCorrection;
 use App\Models\Quote;
 use App\Models\TreasuryAccount;
@@ -70,7 +71,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): View
     {
         $this->requirePermission(Permission::InvoicesView);
-        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder', 'recordedPayments', 'creditNotes', 'deductions.payment', 'taxCorrections.actor']);
+        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder', 'recordedPayments', 'creditNotes', 'deductions.payment', 'taxCorrections.actor', 'labelCorrections.actor']);
         $presenter = app(CommercialDocumentPresenter::class);
         $verifiable = $presenter->isVerifiable($invoice);
 
@@ -189,6 +190,64 @@ class InvoiceController extends Controller
         });
 
         return to_route('invoices.show', $invoice)->with('success', 'La facture brouillon a été mise à jour.');
+    }
+
+    public function correctLabels(Request $request, Invoice $invoice, PlatformCompanyAccess $supportAccess): RedirectResponse
+    {
+        abort_unless($supportAccess->isActiveFor($request->user()), 403);
+        $this->requirePermission(Permission::InvoicesUpdateDraft);
+        $data = $request->validate([
+            'descriptions' => ['required', 'array', 'min:1'],
+            'descriptions.*' => ['required', 'string', 'max:2000'],
+            'original_descriptions' => ['required', 'array', 'min:1'],
+            'original_descriptions.*' => ['required', 'string'],
+            'label_correction_reason' => ['required', 'string', 'max:2000'],
+        ]);
+
+        DB::transaction(function () use ($invoice, $data, $request) {
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            abort_unless($invoice->status === InvoiceStatus::Validated, 409, 'Seule une facture validée peut être corrigée.');
+            $lines = $invoice->lines()->lockForUpdate()->get();
+            $ids = $lines->modelKeys();
+            sort($ids);
+            foreach (['descriptions', 'original_descriptions'] as $field) {
+                $keys = array_keys($data[$field]);
+                sort($keys);
+                if ($keys !== $ids) {
+                    throw ValidationException::withMessages(['descriptions' => 'Renseignez uniquement toutes les lignes de cette facture.']);
+                }
+            }
+            $changes = [];
+            foreach ($lines as $line) {
+                if ($data['original_descriptions'][$line->id] !== $line->description) {
+                    throw ValidationException::withMessages(['descriptions' => 'Les libellés ont changé. Rechargez la facture avant de corriger.']);
+                }
+                $description = trim($data['descriptions'][$line->id]);
+                if ($description === '') {
+                    throw ValidationException::withMessages(['descriptions' => 'Un libellé ne peut pas être vide.']);
+                }
+                if ($description !== $line->description) {
+                    $changes[] = ['invoice_line_id' => $line->id, 'old_description' => $line->description, 'new_description' => $description];
+                    $line->update(['description' => $description]);
+                }
+            }
+            if ($changes === []) {
+                throw ValidationException::withMessages(['descriptions' => 'Aucun libellé modifié.']);
+            }
+            $reason = trim($data['label_correction_reason']);
+            if ($reason === '') {
+                throw ValidationException::withMessages(['label_correction_reason' => 'Le motif est obligatoire.']);
+            }
+            $correction = InvoiceLabelCorrection::create([
+                'invoice_id' => $invoice->id,
+                'created_by' => $request->user()->id,
+                'line_changes' => $changes,
+                'reason' => $reason,
+            ]);
+            $request->attributes->set('invoice_label_correction_id', $correction->id);
+        });
+
+        return to_route('invoices.show', $invoice)->with('success', 'Les libellés ont été corrigés et historisés. Réimprimez la facture corrigée.');
     }
 
     public function correctTax(Request $request, Invoice $invoice, AccountingService $accounting, PlatformCompanyAccess $supportAccess): RedirectResponse

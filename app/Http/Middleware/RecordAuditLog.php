@@ -42,6 +42,10 @@ class RecordAuditLog
             $metadata['platform_support_access'] = true;
             $metadata['platform_actor_id'] = $request->user()->id;
         }
+        if ($routeName === 'invoices.label-correction') {
+            $metadata['invoice_label_correction_id'] = $request->attributes->get('invoice_label_correction_id');
+            $metadata['reason'] = $request->input('label_correction_reason');
+        }
         if ($routeName === 'invoices.tax-correction') {
             $metadata['invoice_tax_correction_id'] = $request->attributes->get('invoice_tax_correction_id');
             $metadata['tax_rates'] = $request->input('tax_rates');
@@ -69,7 +73,7 @@ class RecordAuditLog
         $route = (string) $request->route()?->getName();
 
         return match (true) {
-            str_contains($route, 'tax-correction') => 'correction',
+            str_contains($route, '-correction') => 'correction',
             str_contains($route, 'validate'), str_contains($route, '.post') => 'validation',
             str_contains($route, 'cancel'), str_contains($route, 'reverse') => 'annulation',
             str_contains($route, 'pay'), str_contains($route, 'payments') => 'paiement',
@@ -84,6 +88,7 @@ class RecordAuditLog
     private function description(?string $routeName): string
     {
         return match ($routeName) {
+            'invoices.label-correction' => 'Correction des libellés d’une facture validée',
             'invoices.tax-correction' => 'Correction de la TVA d’une facture validée',
             'invoices.validate' => 'Validation d’une facture',
             'invoices.cancel' => 'Annulation d’une facture',
