@@ -3,7 +3,9 @@
     use App\Modules\Invoices\Enums\DeductionType;
     use App\Modules\Payments\Enums\PaymentMethod;
 
+    $correctingDeductions = $correctingDeductions ?? false;
     $initialDeductions = old('deductions') ?? $invoice->deductions->map(fn ($deduction) => [
+        'id' => $deduction->id,
         'type' => $deduction->type->value,
         'description' => $deduction->description,
         'quantity' => (float) $deduction->quantity,
@@ -17,11 +19,15 @@
 
 <x-app-layout>
     <x-slot name="header">
-        <div><p class="text-sm font-medium text-indigo-600">Facture brouillon #{{ $invoice->id }}</p><h1 class="text-2xl font-semibold text-gray-900">Informations de facturation</h1><p class="mt-1 text-sm text-gray-500">Ajustez les dates, notes et déductions avant de valider définitivement la facture.</p></div>
+        <div>
+            <p class="text-sm font-medium text-indigo-600">{{ $correctingDeductions ? 'Facture '.$invoice->number : 'Facture brouillon #'.$invoice->id }}</p>
+            <h1 class="text-2xl font-semibold text-gray-900">{{ $correctingDeductions ? 'Corriger les frais et avances' : 'Informations de facturation' }}</h1>
+            <p class="mt-1 text-sm text-gray-500">{{ $correctingDeductions ? 'Correction réservée au super-admin. Les frais donnent lieu à un ajustement comptable ; les avances modifiées sont contrepassées puis réenregistrées. Réimprimez la facture après correction.' : 'Ajustez les dates, notes et déductions avant de valider définitivement la facture.' }}</p>
+        </div>
     </x-slot>
     <div class="py-10">
         <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-            <form method="POST" action="{{ route('invoices.update', $invoice) }}" class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8"
+            <form method="POST" action="{{ $correctingDeductions ? route('invoices.deduction-correction', $invoice) : route('invoices.update', $invoice) }}" class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8"
                   x-data='{
                       deductions: @json($initialDeductions),
                       total: {{ (float) $invoice->total }},
@@ -32,7 +38,14 @@
                       deductionsTotal() { return this.deductions.reduce((sum, deduction) => sum + this.amount(deduction), 0) },
                       money(value) { return new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) }
                   }'>
-                @csrf @method('PUT')
+                @csrf @method($correctingDeductions ? 'PATCH' : 'PUT')
+                @if ($correctingDeductions)
+                    <input type="hidden" name="deduction_version" value="{{ old('deduction_version', $deductionVersion) }}">
+                    <x-input-label for="reason" value="Motif de la correction *" />
+                    <textarea id="reason" name="reason" required minlength="3" maxlength="1000" class="mt-1 block w-full rounded-md border-gray-300">{{ old('reason') }}</textarea>
+                    <x-input-error :messages="$errors->get('reason')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('deduction_version')" class="mt-2" />
+                @else
                 <div class="grid gap-6 sm:grid-cols-2">
                     <div>
                         <x-input-label for="issue_date" value="Date de facture *" />
@@ -61,6 +74,8 @@
                     </div>
                 </div>
 
+                @endif
+
                 {{-- Déductions --}}
                 <div id="deductions" class="mt-8 scroll-mt-24 border-t border-gray-100 pt-6">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -79,6 +94,7 @@
                     <div class="mt-4 space-y-3">
                         <template x-for="(deduction, index) in deductions" :key="index">
                             <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                @if ($correctingDeductions)<input type="hidden" :name="`deductions[${index}][id]`" :value="deduction.id || ''">@endif
                                 <input type="hidden" :name="`deductions[${index}][type]`" :value="deduction.type">
                                 <div class="mb-3 flex items-center justify-between">
                                     <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold"

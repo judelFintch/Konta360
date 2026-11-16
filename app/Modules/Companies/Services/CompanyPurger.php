@@ -23,7 +23,7 @@ class CompanyPurger
      */
     private const TABLES = [
         'fixed_asset_depreciations', 'accounting_entry_lines', 'invoice_deductions', 'credit_note_lines',
-        'credit_notes', 'invoice_tax_corrections', 'payments', 'expense_payments', 'bank_reconciliations', 'treasury_transactions',
+        'credit_notes', 'invoice_tax_corrections', 'invoice_label_corrections', 'invoice_deduction_corrections', 'payments', 'expense_payments', 'bank_reconciliations', 'treasury_transactions',
         'accounting_entries', 'invoice_lines', 'invoices', 'quote_lines', 'quotes', 'expenses',
         'fixed_assets', 'treasury_accounts', 'catalog_items', 'parties', 'accounts', 'journals',
         'accounting_periods', 'audit_logs', 'document_sequences', 'subscription_payments',

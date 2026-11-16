@@ -2,6 +2,8 @@
 
 use App\Models\Company;
 use App\Models\Invoice;
+use App\Models\InvoiceDeductionCorrection;
+use App\Models\InvoiceLabelCorrection;
 use App\Models\User;
 use App\Modules\Administration\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Administration\Enums\Role;
@@ -16,6 +18,17 @@ beforeEach(function () {
     $this->admin = User::factory()->forCompany($this->company)->create(['name' => 'Admin Bêta']);
     $this->admin->assignRole(Role::Administrateur->value);
     $this->data = $this->asCompany($this->company, fn () => seedCompanyData($this->admin, 'BETA'));
+
+    $this->asCompany($this->company, function () {
+        InvoiceLabelCorrection::create([
+            'invoice_id' => $this->data['invoice']->id, 'created_by' => $this->operator->id,
+            'line_changes' => [], 'reason' => 'Correction libellé BETA',
+        ]);
+        InvoiceDeductionCorrection::create([
+            'invoice_id' => $this->data['invoice']->id, 'created_by' => $this->operator->id,
+            'old_deductions' => [], 'new_deductions' => [], 'reason' => 'Correction avance BETA',
+        ]);
+    });
 
     // Another company whose data must never leak into the export or the purge.
     $this->other = Company::factory()->create();
@@ -44,6 +57,8 @@ it('exports every table of the company, and only its own rows', function () {
     }
     expect($files)->toHaveKeys(['LISEZMOI.txt', 'societe.csv', 'utilisateurs.csv', 'donnees/bank_reconciliation_transactions.csv'])
         ->and($files['donnees/invoices.csv'])->toContain('FAC-BETA')->not->toContain('FAC-GAMMA')
+        ->and($files['donnees/invoice_label_corrections.csv'])->toContain('Correction libellé BETA')
+        ->and($files['donnees/invoice_deduction_corrections.csv'])->toContain('Correction avance BETA')
         ->and($files['donnees/parties.csv'])->toContain('Client BETA')->not->toContain('Client GAMMA')
         ->and($files['utilisateurs.csv'])->toContain('Admin Bêta')->not->toContain($this->otherAdmin->email)
         ->and($files['utilisateurs.csv'])->not->toContain('password')

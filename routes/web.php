@@ -122,6 +122,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
     Route::get('invoices/{invoice}/edit', [InvoiceController::class, 'edit'])->name('invoices.edit');
     Route::put('invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
+    Route::get('invoices/{invoice}/deduction-correction', [InvoiceController::class, 'editDeductions'])->name('invoices.deductions.edit');
+    Route::patch('invoices/{invoice}/deduction-correction', [InvoiceController::class, 'correctDeductions'])->name('invoices.deduction-correction');
     Route::patch('invoices/{invoice}/label-correction', [InvoiceController::class, 'correctLabels'])
         ->middleware('permission:'.Permission::InvoicesUpdateDraft->value)
         ->name('invoices.label-correction');

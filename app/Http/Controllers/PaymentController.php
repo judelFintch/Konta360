@@ -6,14 +6,10 @@ use App\Http\Requests\PaymentRequest;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\TreasuryAccount;
-use App\Models\TreasuryTransaction;
-use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
-use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Invoices\Enums\InvoiceStatus;
-use App\Modules\Payments\Enums\PaymentStatus;
 use App\Modules\Payments\Services\PaymentRecorder;
-use App\Modules\Treasury\Enums\TreasuryTransactionType;
+use App\Modules\Payments\Services\PaymentReverser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -79,43 +75,15 @@ class PaymentController extends Controller
         return to_route('invoices.show', $invoice)->with('success', 'Le règlement a été enregistré.');
     }
 
-    public function reverse(Request $request, Payment $payment, AccountingService $accounting): RedirectResponse
+    public function reverse(Request $request, Payment $payment, PaymentReverser $reverser): RedirectResponse
     {
         $this->requirePermission(Permission::PaymentsReverse);
         $data = $request->validate([
             'reversal_reason' => ['required', 'string', 'min:3', 'max:1000'],
         ]);
 
-        DB::transaction(function () use ($payment, $data, $accounting) {
-            $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
-            abort_unless($payment->status === PaymentStatus::Recorded, 409, 'Ce règlement est déjà annulé.');
-            $accounting->postPayment($payment, auth()->id());
-            $payment->update([
-                'status' => PaymentStatus::Reversed,
-                'reversed_at' => now(),
-                'reversed_by' => auth()->id(),
-                'reversal_reason' => trim($data['reversal_reason']),
-            ]);
-            $accounting->reversePayment($payment, auth()->id());
-            $originalMovement = TreasuryTransaction::query()
-                ->where('source_type', 'payment')
-                ->where('source_id', $payment->id)
-                ->first();
-            if ($originalMovement) {
-                $movement = TreasuryTransaction::create([
-                    'treasury_account_id' => $originalMovement->treasury_account_id,
-                    'type' => TreasuryTransactionType::Outflow,
-                    'transaction_date' => today(),
-                    'amount' => $payment->amount,
-                    'currency' => $payment->currency,
-                    'description' => "Annulation du règlement {$payment->number}",
-                    'reference' => $payment->reversal_reason,
-                    'source_type' => 'payment_reversal',
-                    'source_id' => $payment->id,
-                    'created_by' => auth()->id(),
-                ]);
-                $movement->update(['number' => SequenceType::TreasuryTransaction->nextNumber($movement->transaction_date)]);
-            }
+        DB::transaction(function () use ($payment, $data, $reverser) {
+            $reverser->reverse($payment, trim($data['reversal_reason']), auth()->id());
         });
 
         return back()->with('success', 'Le règlement a été annulé et reste visible dans l’historique.');

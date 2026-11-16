@@ -10,6 +10,7 @@ use App\Models\Expense;
 use App\Models\ExpensePayment;
 use App\Models\FixedAssetDepreciation;
 use App\Models\Invoice;
+use App\Models\InvoiceDeductionCorrection;
 use App\Models\InvoiceTaxCorrection;
 use App\Models\Journal;
 use App\Models\Payment;
@@ -197,6 +198,27 @@ class AccountingService
             'credit' => (float) $line->debit,
         ])->all();
 
+        $adjustments = AccountingEntry::query()->with('lines.account')
+            ->where(function ($query) use ($invoice) {
+                $query->where(function ($query) use ($invoice) {
+                    $query->where('source_type', 'invoice_deduction_correction')
+                        ->whereIn('source_id', $invoice->deductionCorrections()->select('id'));
+                })->orWhere(function ($query) use ($invoice) {
+                    $query->where('source_type', 'invoice_tax_correction')
+                        ->whereIn('source_id', $invoice->taxCorrections()->select('id'));
+                });
+            })->get();
+        foreach ($adjustments as $adjustment) {
+            foreach ($adjustment->lines as $line) {
+                $lines[] = [
+                    'account_code' => $line->account->code,
+                    'description' => "Contre-passation correction {$invoice->number}",
+                    'debit' => (float) $line->credit,
+                    'credit' => (float) $line->debit,
+                ];
+            }
+        }
+
         return $this->post(
             'invoice_reversal',
             $invoice->id,
@@ -207,6 +229,21 @@ class AccountingService
             $lines,
             $userId
         );
+    }
+
+    public function postInvoiceDeductionCorrection(Invoice $invoice, InvoiceDeductionCorrection $correction, float $difference, int $userId): ?AccountingEntry
+    {
+        if ($difference === 0.0) {
+            return null;
+        }
+        $amount = abs($difference);
+
+        return $this->post('invoice_deduction_correction', $correction->id, 'VE', today()->format('Y-m-d'),
+            "Correction frais facture {$invoice->number}", $invoice->currency,
+            [
+                $this->line('60', "Correction frais {$invoice->number}", $difference > 0 ? $amount : 0, $difference < 0 ? $amount : 0),
+                $this->line('411', "Correction compensation {$invoice->number}", $difference < 0 ? $amount : 0, $difference > 0 ? $amount : 0),
+            ], $userId);
     }
 
     public function postInvoiceTaxCorrection(Invoice $invoice, InvoiceTaxCorrection $correction, int $userId): ?AccountingEntry

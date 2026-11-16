@@ -42,6 +42,10 @@ class RecordAuditLog
             $metadata['platform_support_access'] = true;
             $metadata['platform_actor_id'] = $request->user()->id;
         }
+        if ($routeName === 'invoices.deduction-correction') {
+            $metadata['invoice_deduction_correction_id'] = $request->attributes->get('invoice_deduction_correction_id');
+            $metadata['reason'] = $request->input('reason');
+        }
         if ($routeName === 'invoices.label-correction') {
             $metadata['invoice_label_correction_id'] = $request->attributes->get('invoice_label_correction_id');
             $metadata['reason'] = $request->input('label_correction_reason');
@@ -88,6 +92,7 @@ class RecordAuditLog
     private function description(?string $routeName): string
     {
         return match ($routeName) {
+            'invoices.deduction-correction' => 'Correction des frais et avances d’une facture validée',
             'invoices.label-correction' => 'Correction des libellés d’une facture validée',
             'invoices.tax-correction' => 'Correction de la TVA d’une facture validée',
             'invoices.validate' => 'Validation d’une facture',

@@ -282,6 +282,7 @@
 
                     @if ($supportTaxCorrection && $isValidated)
                         <article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-amber-200">
+                            <a href="{{ route('invoices.deductions.edit', $invoice) }}" class="mb-4 block rounded-lg bg-indigo-600 px-4 py-2.5 text-center text-sm font-semibold text-white">Corriger les frais et avances</a>
                             <h2 class="font-semibold text-gray-900">Corriger les libellés</h2>
                             <p class="mt-2 text-sm text-gray-600">Réservé au super-admin en assistance. Le numéro, la validation, les montants et les écritures comptables sont conservés. Réimprimez la facture après correction et transmettez la version corrigée au client.</p>
                             <form method="POST" action="{{ route('invoices.label-correction', $invoice) }}" class="mt-4 space-y-4">
@@ -354,6 +355,29 @@
                                     <p>{{ $correction->reason }}</p>
                                     @foreach ($correction->line_changes as $change)
                                         <p class="mt-2 break-words">{{ $change['old_description'] }} → {{ $change['new_description'] }}</p>
+                                    @endforeach
+                                </div>
+                            @endforeach
+                        </article>
+                    @endif
+
+                    @if ($invoice->deductionCorrections->isNotEmpty())
+                        <article class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+                            <h2 class="font-semibold text-gray-900">Historique des corrections de frais et avances</h2>
+                            @foreach ($invoice->deductionCorrections as $correction)
+                                <div class="mt-4 text-sm text-gray-700">
+                                    <p>{{ $correction->created_at->format('d/m/Y H:i') }} · {{ $correction->actor?->name }}</p>
+                                    <p>{{ $correction->reason }}</p>
+                                    @foreach (['Avant' => $correction->old_deductions, 'Après' => $correction->new_deductions] as $label => $rows)
+                                        <p class="mt-2 font-semibold">{{ $label }}</p>
+                                        @forelse ($rows as $row)
+                                            <p>{{ $row['description'] }} · {{ $row['quantity'] }} × {{ $row['unit_price'] }} = {{ $money($row['amount']) }} {{ $invoice->currency }}@if ($row['payment_id']) · Règlement #{{ $row['payment_id'] }}@endif</p>
+                                            @if ($row['received_on'])
+                                                <p class="text-xs text-gray-500">Reçue le {{ substr($row['received_on'], 0, 10) }} · {{ \App\Modules\Payments\Enums\PaymentMethod::tryFrom($row['payment_method'] ?? '')?->label() }}@if ($row['reference']) · {{ $row['reference'] }}@endif</p>
+                                            @endif
+                                        @empty
+                                            <p>Aucune déduction</p>
+                                        @endforelse
                                     @endforeach
                                 </div>
                             @endforeach

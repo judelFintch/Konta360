@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\InvoiceDeductionCorrectionRequest;
 use App\Http\Requests\InvoiceDraftRequest;
 use App\Models\Company;
 use App\Models\Invoice;
@@ -20,6 +21,7 @@ use App\Modules\Documents\Enums\DocumentLanguage;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Invoices\Enums\InvoiceStatus;
+use App\Modules\Invoices\Services\InvoiceDeductionCorrector;
 use App\Modules\Payments\Services\PaymentRecorder;
 use App\Modules\Quotes\Enums\QuoteStatus;
 use Illuminate\Http\RedirectResponse;
@@ -71,7 +73,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): View
     {
         $this->requirePermission(Permission::InvoicesView);
-        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder', 'recordedPayments', 'creditNotes', 'deductions.payment', 'taxCorrections.actor', 'labelCorrections.actor']);
+        $invoice->load(['party', 'quote', 'lines', 'creator', 'payments.recorder', 'recordedPayments', 'creditNotes', 'deductions.payment', 'taxCorrections.actor', 'labelCorrections.actor', 'deductionCorrections.actor']);
         $presenter = app(CommercialDocumentPresenter::class);
         $verifiable = $presenter->isVerifiable($invoice);
 
@@ -190,6 +192,31 @@ class InvoiceController extends Controller
         });
 
         return to_route('invoices.show', $invoice)->with('success', 'La facture brouillon a été mise à jour.');
+    }
+
+    public function editDeductions(Request $request, Invoice $invoice, PlatformCompanyAccess $supportAccess, InvoiceDeductionCorrector $corrector): View
+    {
+        abort_unless($supportAccess->isActiveFor($request->user()), 403);
+        $this->requirePermission(Permission::InvoicesUpdateDraft);
+        abort_unless($invoice->status === InvoiceStatus::Validated, 409);
+        $invoice->load('deductions');
+        $treasuryAccounts = TreasuryAccount::query()->where('is_active', true)->where('currency', $invoice->currency)->orderBy('name')->get();
+
+        return view('invoices.edit', [
+            'invoice' => $invoice, 'treasuryAccounts' => $treasuryAccounts,
+            'correctingDeductions' => true, 'deductionVersion' => $corrector->version($invoice),
+        ]);
+    }
+
+    public function correctDeductions(InvoiceDeductionCorrectionRequest $request, Invoice $invoice, InvoiceDeductionCorrector $corrector): RedirectResponse
+    {
+        $this->requirePermission(Permission::InvoicesUpdateDraft);
+        $this->requirePermission(Permission::PaymentsRecord);
+        $this->requirePermission(Permission::PaymentsReverse);
+        $correction = $corrector->correct($invoice, $request->validated(), $request->user()->id);
+        request()->attributes->set('invoice_deduction_correction_id', $correction->id);
+
+        return to_route('invoices.show', $invoice)->with('success', 'Les frais et avances ont été corrigés avec leur historique et les ajustements comptables nécessaires. Réimprimez la facture.');
     }
 
     public function correctLabels(Request $request, Invoice $invoice, PlatformCompanyAccess $supportAccess): RedirectResponse
