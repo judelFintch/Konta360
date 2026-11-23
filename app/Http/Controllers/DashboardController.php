@@ -9,6 +9,9 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Quote;
 use App\Models\TreasuryAccount;
+use App\Models\User;
+use App\Modules\Administration\Enums\Permission;
+use App\Modules\Authentication\Services\UserPresence;
 use App\Modules\Expenses\Enums\ExpenseStatus;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Payments\Enums\PaymentStatus;
@@ -106,7 +109,29 @@ class DashboardController extends Controller
             'balances' => $balances,
             'pendingQuotes' => $pendingQuotes,
             'draftInvoicesCount' => Invoice::query()->where('status', InvoiceStatus::Draft)->count(),
+            'team' => $this->team($company),
         ]);
+    }
+
+    /**
+     * For administrators: the company's active users, online ones first,
+     * then by last time seen. Null for everyone else.
+     *
+     * @return ?Collection<int, array{user: User, at: mixed}>
+     */
+    private function team(Company $company): ?Collection
+    {
+        if (! auth()->user()->can(Permission::UsersManage->value)) {
+            return null;
+        }
+
+        $users = User::query()->whereBelongsTo($company)->where('is_active', true)->orderBy('name')->get();
+        $activity = app(UserPresence::class)->lastActivity($users->modelKeys());
+
+        return $users
+            ->map(fn (User $user) => ['user' => $user, 'at' => $activity->get($user->id)])
+            ->sortByDesc(fn (array $row) => collect([$row['at'], $row['user']->last_login_at])->filter()->max()?->getTimestamp() ?? 0)
+            ->values();
     }
 
     /**

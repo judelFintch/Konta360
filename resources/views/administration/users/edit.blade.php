@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Administration</p><h1 class="text-2xl font-semibold text-gray-900">Gérer {{ $managedUser->name }}</h1></div></x-slot>
+    <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Administration</p><h1 class="text-2xl font-semibold text-gray-900">Gérer {{ $managedUser->name }}</h1><div class="mt-2"><x-user-activity :at="$lastActivity" :last-login="$managedUser->last_login_at" /></div></div></x-slot>
     <div class="py-10">
         <div class="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 lg:px-8">
             @if (session('success'))
@@ -30,6 +30,17 @@
                     <x-primary-button>Réinitialiser le mot de passe</x-primary-button>
                 </div>
             </form>
+
+            <section class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
+                <div class="flex items-center justify-between gap-4 px-6 py-5">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Connexions récentes</h2>
+                        <p class="mt-1 text-sm text-gray-600">Les 10 derniers événements de connexion de cet utilisateur.</p>
+                    </div>
+                    <a href="{{ route('administration.logins.index', ['user_id' => $managedUser->id]) }}" class="shrink-0 text-sm font-semibold text-indigo-600" wire:navigate>Tout l’historique →</a>
+                </div>
+                @include('administration.users._login-events', ['events' => $recentLogins])
+            </section>
         </div>
     </div>
 </x-app-layout>

@@ -210,6 +210,31 @@
                 </section>
             @endcanany
 
+            {{-- Équipe : qui est connecté (administrateurs) --}}
+            @if ($team)
+                @php $onlineCount = $team->filter(fn ($row) => $row['at']?->gte(now()->subMinutes(\App\Modules\Authentication\Services\UserPresence::ONLINE_MINUTES)))->count(); @endphp
+                <section class="rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
+                    <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+                        <div>
+                            <h2 class="font-semibold text-gray-900">Équipe</h2>
+                            <p class="text-sm text-gray-500">{{ $onlineCount }} connecté(s) maintenant sur {{ $team->count() }} utilisateur(s) actif(s).</p>
+                        </div>
+                        <a href="{{ route('administration.logins.index') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-500" wire:navigate>Historique des connexions →</a>
+                    </div>
+                    <ul class="grid divide-y divide-gray-100 sm:grid-cols-2 sm:divide-y-0">
+                        @foreach ($team->take(8) as $row)
+                            <li class="flex items-center justify-between gap-4 px-6 py-3">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold text-gray-900">{{ $row['user']->name }}</p>
+                                    <p class="truncate text-xs text-gray-500">{{ $row['user']->email }}</p>
+                                </div>
+                                <x-user-activity class="shrink-0" :at="$row['at']" :last-login="$row['user']->last_login_at" />
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endif
+
             @unless ($canFinance || $user->canAny([Permission::InvoicesView->value, Permission::QuotesView->value]))
                 <div class="rounded-xl bg-white p-10 text-center shadow-sm ring-1 ring-gray-200">
                     <p class="font-semibold text-gray-900">Bienvenue sur l’espace de {{ $company->name }}</p>

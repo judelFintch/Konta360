@@ -26,7 +26,7 @@ class CompanyDataExporter
         'expense_payments', 'treasury_accounts', 'treasury_transactions', 'bank_reconciliations',
         'accounts', 'journals', 'accounting_entries', 'accounting_entry_lines', 'accounting_periods',
         'fixed_assets', 'fixed_asset_depreciations', 'document_sequences', 'subscription_payments',
-        'audit_logs',
+        'audit_logs', 'login_events',
     ];
 
     /**

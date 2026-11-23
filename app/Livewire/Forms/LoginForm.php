@@ -3,6 +3,8 @@
 namespace App\Livewire\Forms;
 
 use App\Models\User;
+use App\Modules\Authentication\Enums\LoginEventType;
+use App\Modules\Authentication\Services\LoginHistory;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -37,6 +39,10 @@ class LoginForm extends Form
 
         if (! $user || ! $provider->validateCredentials($user, ['password' => $this->password])) {
             RateLimiter::hit($this->throttleKey());
+            // Shown to the account holder and their administrators: someone tried this account.
+            if ($user instanceof User) {
+                app(LoginHistory::class)->record($user, LoginEventType::WrongPassword);
+            }
 
             throw ValidationException::withMessages([
                 'form.email' => trans('auth.failed'),

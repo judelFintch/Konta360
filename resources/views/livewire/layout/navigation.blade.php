@@ -142,6 +142,9 @@ new class extends Component
                             <x-dropdown-link :href="route('administration.users.index')" wire:navigate>
                                 Utilisateurs et rôles
                             </x-dropdown-link>
+                            <x-dropdown-link :href="route('administration.logins.index')" wire:navigate>
+                                Historique des connexions
+                            </x-dropdown-link>
                         @endcan
                         @can(Permission::SettingsManage->value)
                             <x-dropdown-link :href="route('administration.company.edit')" wire:navigate>

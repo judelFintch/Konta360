@@ -27,7 +27,7 @@ new #[Layout('layouts.showcase')] class extends Component
 
         // A trusted device exists only after a valid code, which also verified the address.
         if ($user->hasVerifiedEmail() && $devices->recognizes($user, request())) {
-            $signIn->complete($user, $this->form->remember);
+            $signIn->complete($user, $this->form->remember, SignIn::BY_TRUSTED_DEVICE);
             $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
 
             return;

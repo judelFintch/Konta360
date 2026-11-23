@@ -67,6 +67,26 @@ pas la connexion.
    - La page Profil liste les appareils de confiance et permet d'en oublier
      un ou tous.
 
+7. **Historique et présence** (2026-11-23).
+   - La table `login_events` enregistre :
+     - chaque connexion, avec sa méthode (code ou appareil de confiance) ;
+     - chaque mot de passe erroné ou code refusé sur un compte existant ;
+     - chaque déconnexion.
+
+     Pour chaque événement, elle garde l'adresse IP, le navigateur et la
+     société de l'utilisateur.
+   - Chaque utilisateur voit ses 15 derniers événements dans son profil.
+   - Les administrateurs de la société (`users.manage`) voient
+     l'historique complet, avec des filtres, sur `/administration/connexions`,
+     ainsi que les 10 derniers événements sur la fiche de chaque utilisateur.
+   - « En ligne » signifie une session active dans les 5 dernières minutes.
+     Cette information est lue dans la table `sessions` et n'est donc
+     disponible qu'avec `SESSION_DRIVER=database`. Elle est affichée dans la
+     liste des utilisateurs et dans la carte « Équipe » du tableau de bord
+     des administrateurs.
+   - L'historique fait partie des données de la société : il est exporté et
+     purgé avec elle.
+
 ## Conséquences
 
 - **Le service n'est utilisable qu'avec un envoi d'e-mails qui fonctionne.**

@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use App\Modules\Authentication\Enums\LoginEventType;
+use App\Modules\Authentication\Services\LoginHistory;
 use App\Modules\Authentication\Enums\AuthenticationCodePurpose;
 use App\Modules\Authentication\Services\AuthenticationCodeService;
 use App\Modules\Authentication\Services\PendingLogin;
@@ -8,6 +10,7 @@ use App\Modules\Authentication\Services\SignIn;
 use App\Modules\Authentication\Services\TrustedDevices;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -46,7 +49,12 @@ new #[Layout('layouts.showcase')] class extends Component
             return;
         }
 
-        $codes->verify($user, AuthenticationCodePurpose::Login, $this->code);
+        try {
+            $codes->verify($user, AuthenticationCodePurpose::Login, $this->code);
+        } catch (ValidationException $exception) {
+            app(LoginHistory::class)->record($user, LoginEventType::WrongCode);
+            throw $exception;
+        }
         LoginForm::ensureCanSignIn($user, 'code');
 
         // Receiving the code proves the address is the user's.
@@ -57,7 +65,7 @@ new #[Layout('layouts.showcase')] class extends Component
         if ($this->trustDevice) {
             $devices->trust($user, request());
         }
-        $signIn->complete($user, PendingLogin::remember());
+        $signIn->complete($user, PendingLogin::remember(), SignIn::BY_CODE);
 
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }

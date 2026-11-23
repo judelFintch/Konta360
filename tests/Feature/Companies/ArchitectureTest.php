@@ -2,6 +2,7 @@
 
 use App\Models\AuthenticationCode;
 use App\Models\Company;
+use App\Models\LoginEvent;
 use App\Models\Plan;
 use App\Models\PlatformEvent;
 use App\Models\TrustedDevice;
@@ -21,9 +22,10 @@ arch('every business model is confined to a company')
     ->toUseTrait(BelongsToCompany::class)
     // Not company data: the companies themselves, their users (see ADR 0002
     // § 4), the subscription plans, the sign-in codes, which are used before
-    // any company is known (ADR 0004), like the trusted devices, and the
+    // any company is known (ADR 0004), like the trusted devices and the
+    // sign-in history (filtered explicitly on company_id), and the
     // platform's own log (ADR 0005).
-    ->ignoring([Company::class, User::class, Plan::class, AuthenticationCode::class, TrustedDevice::class, PlatformEvent::class]);
+    ->ignoring([Company::class, User::class, Plan::class, AuthenticationCode::class, TrustedDevice::class, LoginEvent::class, PlatformEvent::class]);
 
 it('uses no unscoped exists/unique validation rule on business tables', function () {
     $offenders = [];
