@@ -115,7 +115,12 @@ class InvoiceController extends Controller
                 409,
                 'Ce devis ne peut pas être converti.'
             );
-            abort_if(Invoice::where('quote_id', $quote->id)->exists(), 409, 'Ce devis a déjà été facturé.');
+            // A cancelled invoice does not count: the quote can be invoiced again.
+            abort_if(
+                Invoice::where('quote_id', $quote->id)->where('status', '!=', InvoiceStatus::Cancelled)->exists(),
+                409,
+                'Ce devis a déjà été facturé.'
+            );
 
             $invoice = Invoice::create([
                 'quote_id' => $quote->id,
@@ -370,6 +375,9 @@ class InvoiceController extends Controller
     {
         $this->requirePermission(Permission::InvoicesValidate);
         $this->ensureDraft($invoice);
+        if ($blocker = $invoice->chronologyBlocker()) {
+            return back()->with('error', $blocker);
+        }
         try {
             $limits->ensureCanValidateInvoice(Company::current());
         } catch (ValidationException $exception) {
@@ -383,6 +391,10 @@ class InvoiceController extends Controller
             DB::transaction(function () use ($invoice, $accounting, $recorder) {
                 $invoice = Invoice::query()->with('deductions')->lockForUpdate()->findOrFail($invoice->id);
                 $this->ensureDraft($invoice);
+                // Checked again under the lock: another invoice may have been numbered meanwhile.
+                if ($blocker = $invoice->chronologyBlocker()) {
+                    throw ValidationException::withMessages(['issue_date' => $blocker]);
+                }
                 $invoice->update([
                     'number' => SequenceType::Invoice->nextNumber($invoice->issue_date),
                     'status' => InvoiceStatus::Validated,
@@ -404,7 +416,11 @@ class InvoiceController extends Controller
                 }
             });
         } catch (ValidationException $exception) {
-            return back()->with('error', 'Avance non enregistrée : '.collect($exception->errors())->flatten()->first().' Corrigez la facture brouillon.');
+            $message = collect($exception->errors())->flatten()->first();
+
+            return back()->with('error', array_key_exists('issue_date', $exception->errors())
+                ? $message
+                : 'Avance non enregistrée : '.$message.' Corrigez la facture brouillon.');
         }
 
         return back()->with('success', 'La facture a été validée et numérotée.');

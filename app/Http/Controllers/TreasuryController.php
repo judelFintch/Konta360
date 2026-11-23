@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payment;
 use App\Models\TreasuryAccount;
 use App\Models\TreasuryTransaction;
-use App\Models\Payment;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Enums\Permission;
 use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Companies\Validation\CompanyRule;
+use App\Modules\Payments\Enums\PaymentStatus;
 use App\Modules\Treasury\Enums\TreasuryAccountType;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
-use App\Modules\Payments\Enums\PaymentStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -132,14 +132,14 @@ class TreasuryController extends Controller
         return to_route('treasury.index')->with('success', "Le mouvement {$transaction->number} a été comptabilisé.");
     }
 
-    public function assignPayment(Request $request, Payment $payment): RedirectResponse
+    public function assignPayment(Request $request, Payment $payment, AccountingService $accounting): RedirectResponse
     {
         $this->authorizeTreasury();
         $data = $request->validate([
             'treasury_account_id' => ['required', 'integer', CompanyRule::exists('treasury_accounts')],
         ]);
 
-        DB::transaction(function () use ($payment, $data) {
+        DB::transaction(function () use ($payment, $data, $accounting) {
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             abort_unless($payment->status === PaymentStatus::Recorded, 409, 'Seul un règlement actif peut être affecté.');
             abort_if($payment->treasury_account_id, 409, 'Ce règlement est déjà affecté à la trésorerie.');
@@ -152,6 +152,8 @@ class TreasuryController extends Controller
             }
 
             $payment->update(['treasury_account_id' => $account->id]);
+            $payment->unsetRelation('treasuryAccount');
+            $accounting->reclassifyPaymentCash($payment, auth()->id());
             $movement = TreasuryTransaction::create([
                 'treasury_account_id' => $account->id,
                 'type' => TreasuryTransactionType::Inflow,

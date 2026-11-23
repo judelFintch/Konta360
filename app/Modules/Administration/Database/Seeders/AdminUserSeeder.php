@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Modules\Administration\Enums\Role as RoleEnum;
 use App\Modules\Companies\Services\CompanyProvisioner;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 /**
  * Seeds the platform administrator with a temporary password and grants
@@ -18,6 +19,9 @@ class AdminUserSeeder extends Seeder
     public function run(CompanyProvisioner $provisioner): void
     {
         $admin = config('konta360.admin');
+        if (blank($admin['email']) || blank($admin['password'])) {
+            throw new RuntimeException('Définissez ADMIN_EMAIL et ADMIN_PASSWORD dans .env avant de créer l’administrateur.');
+        }
 
         $company = Company::query()->oldest('id')->first() ?? Company::create(['name' => config('app.name', 'Konta360')]);
         $provisioner->provision($company);

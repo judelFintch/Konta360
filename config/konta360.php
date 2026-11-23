@@ -7,16 +7,16 @@ return [
     | Root administrator account
     |--------------------------------------------------------------------------
     |
-    | Seeded by AdminUserSeeder and granted the Administrateur role. The
-    | defaults below are for local development only — set ADMIN_EMAIL and
-    | ADMIN_PASSWORD in .env before seeding any shared or production database.
+    | Seeded by AdminUserSeeder and granted the Administrateur role. There
+    | is deliberately no default: ADMIN_EMAIL and ADMIN_PASSWORD must be set
+    | in .env, otherwise the seeder refuses to run. Never commit real values.
     |
     */
 
     'admin' => [
         'name' => env('ADMIN_NAME', 'Administrateur Konta360'),
-        'email' => env('ADMIN_EMAIL', 'judfintch@gmail.com'),
-        'password' => env('ADMIN_PASSWORD', '4390ju@'),
+        'email' => env('ADMIN_EMAIL'),
+        'password' => env('ADMIN_PASSWORD'),
     ],
 
     /*

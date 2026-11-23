@@ -212,11 +212,80 @@ class CommercialDocumentPresenter
         return $document instanceof Invoice && (float) $document->deductions_total > 0;
     }
 
+    /**
+     * What the public verification page tells whoever scans the QR code:
+     * whether the document is still valid today, not only whether it is
+     * authentic. The printed status never changes, so this is the only
+     * place where a later cancellation, credit note or expiry shows.
+     *
+     * @return array{valid: bool, label: string, detail: ?string}
+     */
+    public function verificationState(Model $document): array
+    {
+        if ($document instanceof Invoice) {
+            $document->loadMissing('creditNotes');
+            $credited = $document->creditedAmount();
+            $creditNotes = $document->creditNotes->sortBy('id')->pluck('number')->join(', ');
+
+            return match (true) {
+                $document->status === InvoiceStatus::Cancelled => [
+                    'valid' => false,
+                    'label' => 'Annulée',
+                    'detail' => $document->cancelled_at ? 'Facture annulée le '.$document->cancelled_at->format('d/m/Y').'.' : 'Facture annulée.',
+                ],
+                $document->isFullyCredited() => [
+                    'valid' => false,
+                    'label' => 'Annulée par avoir',
+                    'detail' => "Facture entièrement annulée par l’avoir {$creditNotes}.",
+                ],
+                $credited > 0 => [
+                    'valid' => true,
+                    'label' => 'Validée — avoir partiel',
+                    'detail' => "Avoir {$creditNotes} de ".number_format($credited, 2, ',', ' ')." {$document->currency} déduit de cette facture.",
+                ],
+                default => ['valid' => true, 'label' => $document->status->label(), 'detail' => null],
+            };
+        }
+
+        if ($document instanceof Quote) {
+            $document->loadMissing(['invoice', 'latestInvoice']);
+            $invoice = $document->invoice;
+            $lastInvoice = $document->latestInvoice;
+
+            return match (true) {
+                in_array($document->status, [QuoteStatus::Draft, QuoteStatus::Cancelled, QuoteStatus::Rejected], true) => [
+                    'valid' => false,
+                    'label' => $document->status->label(),
+                    'detail' => null,
+                ],
+                $invoice?->status === InvoiceStatus::Validated => [
+                    'valid' => true,
+                    'label' => 'Facturé',
+                    'detail' => "Devis facturé par la facture {$invoice->number}.",
+                ],
+                ! $invoice && $lastInvoice?->status === InvoiceStatus::Cancelled => [
+                    'valid' => false,
+                    'label' => 'Facture annulée',
+                    'detail' => 'La facture '.($lastInvoice->number ?: '#'.$lastInvoice->id).' issue de ce devis a été annulée.',
+                ],
+                $document->isExpired() => [
+                    'valid' => false,
+                    'label' => 'Expiré',
+                    'detail' => 'Offre expirée le '.$document->valid_until->format('d/m/Y').'.',
+                ],
+                default => ['valid' => true, 'label' => $document->status->label(), 'detail' => null],
+            };
+        }
+
+        return ['valid' => true, 'label' => $document->status->label(), 'detail' => null];
+    }
+
     public function watermark(Model $document, string $locale = 'fr'): ?string
     {
         $key = match (true) {
             $document instanceof Invoice && $document->status === InvoiceStatus::Draft => 'invoice_draft',
             $document instanceof Invoice && $document->status === InvoiceStatus::Cancelled => 'invoice_cancelled',
+            $document instanceof Invoice && $document->isFullyCredited() => 'invoice_credited',
             $document instanceof Quote && $document->status === QuoteStatus::Draft => 'quote_draft',
             $document instanceof Quote && $document->status === QuoteStatus::Cancelled => 'quote_cancelled',
             $document instanceof Quote && $document->status === QuoteStatus::Rejected => 'quote_rejected',

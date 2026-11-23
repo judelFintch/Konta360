@@ -65,7 +65,11 @@ class CompanyPurger
 
         // Files stored before multi-company support live outside the
         // company's directory.
-        Storage::disk('public')->delete(array_filter([$company->logo_path, $company->signature_path, $company->stamp_path]));
-        Storage::disk('public')->deleteDirectory($company->storageDirectory());
+        // The public disk is still cleaned for files stored before they moved
+        // to the private branding disk.
+        foreach (array_unique([Company::BRAND_DISK, 'public']) as $disk) {
+            Storage::disk($disk)->delete(array_filter([$company->logo_path, $company->signature_path, $company->stamp_path]));
+            Storage::disk($disk)->deleteDirectory($company->storageDirectory());
+        }
     }
 }

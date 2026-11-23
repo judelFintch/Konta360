@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\AccountingEntry;
+use App\Models\AccountingEntryLine;
 use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Payment;
+use App\Models\TreasuryAccount;
 use App\Models\User;
 use App\Modules\Accounting\Services\AccountingService;
 use App\Modules\Administration\Database\Seeders\RolesAndPermissionsSeeder;
@@ -12,6 +14,7 @@ use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Parties\Enums\PartyType;
 use App\Modules\Payments\Enums\PaymentMethod;
 use App\Modules\Payments\Enums\PaymentStatus;
+use App\Modules\Treasury\Enums\TreasuryAccountType;
 
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
@@ -186,4 +189,61 @@ it('cancels a draft invoice without any accounting entry', function () {
         ->assertSessionHas('success');
 
     expect(AccountingEntry::count())->toBe(0);
+});
+
+function netBalance(string $code): float
+{
+    $lines = AccountingEntryLine::query()->whereHas('account', fn ($query) => $query->where('code', $code))->get();
+
+    return round((float) $lines->sum('debit') - (float) $lines->sum('credit'), 2);
+}
+
+it('books a cash payment on the bank when it is received on a bank account', function () {
+    $this->invoice->update(['number' => 'FAC-2026-00460', 'status' => InvoiceStatus::Validated]);
+    $bank = TreasuryAccount::create([
+        'name' => 'Banque', 'type' => TreasuryAccountType::Bank, 'currency' => 'USD',
+        'opening_balance' => 0, 'is_active' => true, 'created_by' => $this->user->id,
+    ]);
+
+    $this->actingAs($this->user)->post(route('payments.store', $this->invoice), [
+        'payment_date' => today()->format('Y-m-d'),
+        'amount' => 300,
+        'method' => PaymentMethod::Cash->value,
+        'treasury_account_id' => $bank->id,
+    ])->assertSessionHasNoErrors();
+
+    $entry = AccountingEntry::with(['journal', 'lines.account'])->where('source_type', 'payment')->firstOrFail();
+
+    expect($entry->journal->code)->toBe('BQ')
+        ->and($entry->lines->pluck('account.code')->all())->toBe(['512', '411'])
+        ->and(netBalance('571'))->toBe(0.0);
+});
+
+it('moves a historical cash payment to the bank when it is assigned to a bank account, and reverses both', function () {
+    $this->invoice->update(['number' => 'FAC-2026-00461', 'status' => InvoiceStatus::Validated]);
+    $this->actingAs($this->user)->post(route('payments.store', $this->invoice), [
+        'payment_date' => today()->format('Y-m-d'),
+        'amount' => 200,
+        'method' => PaymentMethod::Cash->value,
+    ])->assertSessionHasNoErrors();
+    $payment = Payment::firstOrFail();
+    expect(netBalance('571'))->toBe(200.0);
+
+    $bank = TreasuryAccount::create([
+        'name' => 'Banque', 'type' => TreasuryAccountType::Bank, 'currency' => 'USD',
+        'opening_balance' => 0, 'is_active' => true, 'created_by' => $this->user->id,
+    ]);
+    $this->post(route('treasury.payments.assign', $payment), ['treasury_account_id' => $bank->id])
+        ->assertSessionHasNoErrors();
+
+    expect(netBalance('571'))->toBe(0.0)
+        ->and(netBalance('512'))->toBe(200.0)
+        ->and(AccountingEntry::where('source_type', 'payment_treasury_reclass')->count())->toBe(1);
+
+    $this->patch(route('payments.reverse', $payment), ['reversal_reason' => 'Chèque rejeté'])
+        ->assertSessionHasNoErrors();
+
+    expect(netBalance('571'))->toBe(0.0)
+        ->and(netBalance('512'))->toBe(0.0)
+        ->and(netBalance('411'))->toBe(0.0);
 });

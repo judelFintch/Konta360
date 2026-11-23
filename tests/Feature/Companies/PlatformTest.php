@@ -84,8 +84,8 @@ it('refuses to turn an existing company user into a platform administrator', fun
 });
 
 it('serves the issuing company’s logo on the public verification page', function () {
-    Storage::fake('public');
-    $this->company->forceFill(['logo_path' => UploadedFile::fake()->image('logo.png')->store('companies/'.$this->company->id, 'public')])->save();
+    Storage::fake('local');
+    $this->company->forceFill(['logo_path' => UploadedFile::fake()->image('logo.png')->store('companies/'.$this->company->id, 'local')])->save();
     $invoice = $this->asCompany($this->company, function () {
         $party = Party::forceCreate(['type' => 'customer', 'name' => 'Client', 'is_active' => true]);
 

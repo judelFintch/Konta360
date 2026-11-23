@@ -19,6 +19,10 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Test-only key and administrator: the suite runs without a .env file. -->
+        <env name="APP_KEY" value="base64:dGVzdGluZy1vbmx5LWtleS1rb250YTM2MC0zMmJ5dGU="/>
+        <env name="ADMIN_EMAIL" value="admin@konta360.test"/>
+        <env name="ADMIN_PASSWORD" value="test-only-Password-1"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

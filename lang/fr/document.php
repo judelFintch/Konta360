@@ -74,6 +74,7 @@ return [
     'watermark' => [
         'invoice_draft' => 'Brouillon',
         'invoice_cancelled' => 'Annulée',
+        'invoice_credited' => 'Annulée par avoir',
         'quote_draft' => 'Brouillon',
         'quote_cancelled' => 'Annulé',
         'quote_rejected' => 'Refusé',

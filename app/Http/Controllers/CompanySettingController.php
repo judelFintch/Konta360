@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -54,20 +53,20 @@ class CompanySettingController extends Controller
         $company = Company::current();
         if ($request->boolean('remove_logo') && ! $request->hasFile('logo')) {
             if ($company->logo_path) {
-                Storage::disk('public')->delete($company->logo_path);
+                Company::brandDisk()->delete($company->logo_path);
             }
             $data['logo_path'] = null;
         }
 
-        foreach (['logo', 'signature', 'stamp'] as $asset) {
+        foreach (Company::BRAND_ASSETS as $asset) {
             if (! $request->hasFile($asset)) {
                 continue;
             }
             $pathColumn = $asset.'_path';
             if ($company->{$pathColumn}) {
-                Storage::disk('public')->delete($company->{$pathColumn});
+                Company::brandDisk()->delete($company->{$pathColumn});
             }
-            $data[$pathColumn] = $request->file($asset)->store($company->storageDirectory(), 'public');
+            $data[$pathColumn] = $request->file($asset)->store($company->storageDirectory(), Company::BRAND_DISK);
         }
         unset($data['logo'], $data['remove_logo'], $data['signature'], $data['stamp']);
 
@@ -86,10 +85,9 @@ class CompanySettingController extends Controller
 
     public static function assetResponse(Company $company, string $type): BinaryFileResponse
     {
-        abort_unless(in_array($type, ['logo', 'signature', 'stamp'], true), 404);
-        $path = $company->{$type.'_path'};
-        abort_unless($path && Storage::disk('public')->exists($path), 404);
+        $path = $company->brandAssetPath($type);
+        abort_unless($path !== null, 404);
 
-        return response()->file(Storage::disk('public')->path($path));
+        return response()->file($path, ['Cache-Control' => 'private, max-age=300']);
     }
 }

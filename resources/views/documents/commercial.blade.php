@@ -9,7 +9,7 @@
     // French typography puts a space before the colon, English does not.
     $colon = $locale === 'en' ? ':' : ' :';
     $asset = fn (string $type) => $forPdf
-        ? Storage::disk('public')->path($company->{$type.'_path'})
+        ? $company->brandAssetPath($type)
         : route('administration.company.asset', $type);
     $isQuote = $document instanceof \App\Models\Quote;
     $netTotal = (float) $document->subtotal - (float) $document->discount_total;

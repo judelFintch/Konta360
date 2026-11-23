@@ -4,6 +4,9 @@
     $money = fn ($value, int $decimals = 2) => number_format((float) $value, $decimals, ',', ' ');
     $user = auth()->user();
     $canFinance = $user->canAny([Permission::InvoicesView->value, Permission::AccountingView->value, Permission::FinancialStatementsView->value]);
+    // Bank balances and supplier expenses are not sales figures: a sales profile does not see them.
+    $canTreasury = $user->canAny([Permission::TreasuryManage->value, Permission::AccountingView->value]);
+    $canExpenses = $user->can(Permission::AccountingView->value);
     $missingSettings = blank($company->tax_identifier) || blank($company->trade_register) || blank($company->address) || $company->name === config('app.name');
 @endphp
 
@@ -58,12 +61,12 @@
                     <div class="mt-3 space-y-4">
                         @foreach ($metrics as $currency => $metric)
                             <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                                @foreach ([
+                                @foreach (array_values(array_filter([
                                     ['Chiffre d’affaires du mois', $metric['sales'], 'text-gray-900', 'Factures validées, avoirs déduits'],
                                     ['Encaissé ce mois', $metric['collected'], 'text-emerald-600', 'Règlements clients enregistrés'],
-                                    ['Dépenses du mois', $metric['expenses'], 'text-amber-700', 'Charges fournisseurs validées'],
+                                    $canExpenses ? ['Dépenses du mois', $metric['expenses'], 'text-amber-700', 'Charges fournisseurs validées'] : null,
                                     ['Reste à encaisser', $metric['outstanding'], 'text-indigo-700', 'Toutes factures confondues'],
-                                ] as [$label, $value, $color, $hint])
+                                ])) as [$label, $value, $color, $hint])
                                     <article class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:p-5">
                                         <p class="text-xs font-medium text-gray-500">{{ $label }}</p>
                                         <p class="mt-2 text-xl font-semibold sm:text-2xl {{ $color }}">
@@ -82,7 +85,7 @@
                 </section>
 
                 {{-- Évolution et trésorerie --}}
-                <section class="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+                <section class="grid gap-6 {{ $canTreasury ? 'lg:grid-cols-[1.6fr_1fr]' : '' }}">
                     <article class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
                         <h2 class="font-semibold text-gray-900">Ventes des six derniers mois</h2>
                         <p class="mt-1 text-sm text-gray-500">Montant TTC des factures validées, avant avoirs.</p>
@@ -111,6 +114,7 @@
                         </div>
                     </article>
 
+                    @if ($canTreasury)
                     <article class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
                         <div class="flex items-center justify-between">
                             <div>
@@ -133,6 +137,7 @@
                             @endforelse
                         </div>
                     </article>
+                    @endif
                 </section>
             @endif
 

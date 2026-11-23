@@ -27,3 +27,10 @@ it('is idempotent and does not duplicate the admin user when run twice', functio
 
     expect(User::where('email', config('konta360.admin.email'))->count())->toBe(1);
 });
+
+it('refuses to create the admin without configured credentials', function () {
+    config(['konta360.admin.password' => null]);
+
+    expect(fn () => $this->seed(AdminUserSeeder::class))->toThrow(RuntimeException::class);
+    expect(User::count())->toBe(0);
+});

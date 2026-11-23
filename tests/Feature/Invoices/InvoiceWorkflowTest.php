@@ -143,3 +143,25 @@ it('cancels an invoice with an audit timestamp and actor', function () {
         ->cancelled_by->toBe($this->user->id)
         ->cancelled_at->not->toBeNull();
 });
+
+it('refuses to number an invoice dated in the future or before the last numbered invoice', function () {
+    $this->actingAs($this->user)->post(route('quotes.invoice', $this->quote));
+    $invoice = Invoice::firstOrFail();
+
+    $invoice->update(['issue_date' => today()->addDay(), 'due_date' => today()->addMonth()]);
+    $this->patch(route('invoices.validate', $invoice))->assertSessionHas('error', fn (string $message) => str_contains($message, 'dans le futur'));
+    expect($invoice->refresh()->number)->toBeNull();
+
+    Invoice::create([
+        'number' => 'FAC-2026-00900', 'party_id' => $this->party->id, 'status' => InvoiceStatus::Validated,
+        'issue_date' => today(), 'due_date' => today(), 'currency' => 'USD',
+        'subtotal' => 1, 'discount_total' => 0, 'tax_total' => 0, 'total' => 1, 'created_by' => $this->user->id,
+    ]);
+    $invoice->update(['issue_date' => today()->subDay()]);
+    $this->patch(route('invoices.validate', $invoice))->assertSessionHas('error', fn (string $message) => str_contains($message, 'ordre des dates'));
+    expect($invoice->refresh())->number->toBeNull()->status->toBe(InvoiceStatus::Draft);
+
+    $invoice->update(['issue_date' => today()]);
+    $this->patch(route('invoices.validate', $invoice))->assertSessionHas('success');
+    expect($invoice->refresh()->status)->toBe(InvoiceStatus::Validated);
+});

@@ -5,7 +5,6 @@ namespace App\Modules\Companies\Services;
 use App\Models\Company;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use ZipArchive;
 
@@ -60,10 +59,9 @@ class CompanyDataExporter
             Schema::getColumnListing('bank_reconciliation_transactions'),
         ));
 
-        foreach (['logo', 'signature', 'stamp'] as $asset) {
-            $file = $company->{$asset.'_path'};
-            if ($file && Storage::disk('public')->exists($file)) {
-                $zip->addFile(Storage::disk('public')->path($file), "fichiers/{$asset}.".pathinfo($file, PATHINFO_EXTENSION));
+        foreach (Company::BRAND_ASSETS as $asset) {
+            if ($file = $company->brandAssetPath($asset)) {
+                $zip->addFile($file, "fichiers/{$asset}.".pathinfo($file, PATHINFO_EXTENSION));
             }
         }
 

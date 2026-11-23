@@ -48,7 +48,8 @@ it('allows an administrator to update company settings', function () {
         ->invoice_footer->toBe('Merci pour votre confiance.');
 });
 
-it('stores company branding assets on the public disk', function () {
+it('stores company branding assets on the private disk, out of public reach', function () {
+    Storage::fake('local');
     Storage::fake('public');
 
     $data = Company::current()->only([
@@ -65,17 +66,22 @@ it('stores company branding assets on the public disk', function () {
         ->assertSessionHasNoErrors();
 
     $company = Company::current()->refresh();
-    Storage::disk('public')->assertExists($company->logo_path);
-    Storage::disk('public')->assertExists($company->signature_path);
-    Storage::disk('public')->assertExists($company->stamp_path);
+    foreach (['logo_path', 'signature_path', 'stamp_path'] as $column) {
+        Storage::disk('local')->assertExists($company->{$column});
+        Storage::disk('public')->assertMissing($company->{$column});
+    }
     $this->get(route('administration.company.asset', 'logo'))->assertOk();
+    $this->get(route('administration.company.asset', 'signature'))->assertOk();
+
+    auth()->logout();
+    $this->get(route('administration.company.asset', 'signature'))->assertRedirect(route('login'));
 });
 
 it('allows an administrator to remove the company logo', function () {
-    Storage::fake('public');
+    Storage::fake('local');
 
     $company = Company::current();
-    $logoPath = UploadedFile::fake()->image('logo.png')->store($company->storageDirectory(), 'public');
+    $logoPath = UploadedFile::fake()->image('logo.png')->store($company->storageDirectory(), 'local');
     $company->forceFill(['logo_path' => $logoPath])->save();
     $data = $company->only([
         'name', 'legal_form', 'tax_identifier', 'trade_register', 'address', 'email',
@@ -91,7 +97,7 @@ it('allows an administrator to remove the company logo', function () {
         ->assertSessionHasNoErrors();
 
     expect($company->refresh()->logo_path)->toBeNull();
-    Storage::disk('public')->assertMissing($logoPath);
+    Storage::disk('local')->assertMissing($logoPath);
     $this->get(route('administration.company.asset', 'logo'))->assertNotFound();
 });
 
@@ -167,4 +173,18 @@ it('prints company legal details on commercial documents', function () {
         ->assertSee('IMP-2026-001')
         ->assertSee('RCCM-LSH-001')
         ->assertSee('Paiement à réception.');
+});
+
+it('moves branding files stored on the public disk to the private disk', function () {
+    Storage::fake('local');
+    Storage::fake('public');
+    $company = Company::current();
+    $path = UploadedFile::fake()->image('cachet.png')->store($company->storageDirectory(), 'public');
+    $company->forceFill(['stamp_path' => $path])->save();
+
+    (require database_path('migrations/2026_11_23_110000_move_company_branding_files_to_private_disk.php'))->up();
+
+    Storage::disk('public')->assertMissing($path);
+    Storage::disk('local')->assertExists($path);
+    expect($company->refresh()->brandAssetPath('stamp'))->not->toBeNull();
 });

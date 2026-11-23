@@ -20,6 +20,7 @@ use App\Modules\Accounting\Enums\PeriodStatus;
 use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Invoices\Enums\DeductionType;
 use App\Modules\Payments\Enums\PaymentMethod;
+use App\Modules\Treasury\Enums\TreasuryAccountType;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
 use LogicException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -104,9 +105,8 @@ class AccountingService
 
     public function postPayment(Payment $payment, int $userId): AccountingEntry
     {
-        $isCash = $payment->method === PaymentMethod::Cash;
-        $cashAccount = $isCash ? '571' : '512';
-        $journal = $isCash ? 'CA' : 'BQ';
+        $cashAccount = $this->paymentCashAccount($payment);
+        $journal = $cashAccount === TreasuryAccountType::Cash->accountingCode() ? 'CA' : 'BQ';
 
         return $this->post(
             'payment',
@@ -118,6 +118,59 @@ class AccountingService
             [
                 $this->line($cashAccount, "Encaissement {$payment->number}", (float) $payment->amount, 0),
                 $this->line('411', "Règlement client {$payment->number}", 0, (float) $payment->amount),
+            ],
+            $userId
+        );
+    }
+
+    /**
+     * The cash account debited by a customer payment is the one of the
+     * treasury account that received the money (cash deposited at the bank
+     * goes to 512, not 571). Without a treasury account, the payment method
+     * decides.
+     */
+    public function paymentCashAccount(Payment $payment): string
+    {
+        $payment->loadMissing('treasuryAccount');
+
+        return $payment->treasuryAccount?->type->accountingCode()
+            ?? ($payment->method === PaymentMethod::Cash
+                ? TreasuryAccountType::Cash->accountingCode()
+                : TreasuryAccountType::Bank->accountingCode());
+    }
+
+    /**
+     * When a payment recorded without a treasury account is later assigned
+     * to one of another kind (a « cash » payment deposited at the bank),
+     * moves the amount from the cash account its entry used to the one of
+     * the treasury account, so that the books match the treasury. Dated on
+     * the day of the assignment; nothing to do when both agree or when the
+     * payment was never posted.
+     */
+    public function reclassifyPaymentCash(Payment $payment, int $userId): ?AccountingEntry
+    {
+        $bookedOn = AccountingEntry::query()
+            ->with('lines.account')
+            ->where('source_type', 'payment')
+            ->where('source_id', $payment->id)
+            ->first()
+            ?->lines->first(fn ($line) => (float) $line->debit > 0)
+            ?->account->code;
+        $toAccount = $this->paymentCashAccount($payment);
+        if (! $bookedOn || $bookedOn === $toAccount) {
+            return null;
+        }
+
+        return $this->post(
+            'payment_treasury_reclass',
+            $payment->id,
+            'OD',
+            today()->format('Y-m-d'),
+            "Affectation trésorerie du règlement {$payment->number}",
+            $payment->currency,
+            [
+                $this->line($toAccount, "Affectation {$payment->number}", (float) $payment->amount, 0),
+                $this->line($bookedOn, "Affectation {$payment->number}", 0, (float) $payment->amount),
             ],
             $userId
         );
@@ -156,7 +209,15 @@ class AccountingService
             ->where('source_id', $payment->id)
             ->firstOrFail();
 
-        $lines = $original->lines->map(fn ($line) => [
+        // A later treasury reclassification is reversed with the payment, so
+        // that the money leaves the account it actually sits in.
+        $reclass = AccountingEntry::query()
+            ->with('lines.account')
+            ->where('source_type', 'payment_treasury_reclass')
+            ->where('source_id', $payment->id)
+            ->first();
+
+        $lines = $original->lines->concat($reclass?->lines ?? [])->map(fn ($line) => [
             'account_code' => $line->account->code,
             'description' => "Contre-passation {$payment->number}",
             'debit' => (float) $line->credit,

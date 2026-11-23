@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Modules\Companies\Concerns\BelongsToCompany;
+use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Quotes\Enums\QuoteStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -65,8 +66,23 @@ class Quote extends Model
             && $this->valid_until->lt(today());
     }
 
+    /**
+     * The invoice currently issued from this quote. A cancelled invoice no
+     * longer counts: the quote can then be invoiced again.
+     */
     public function invoice(): HasOne
     {
-        return $this->hasOne(Invoice::class);
+        return $this->hasOne(Invoice::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->where('status', '!=', InvoiceStatus::Cancelled)
+        );
+    }
+
+    /**
+     * The last invoice issued from this quote, cancelled or not.
+     */
+    public function latestInvoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class)->latestOfMany();
     }
 }

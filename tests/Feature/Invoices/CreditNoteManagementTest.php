@@ -137,3 +137,17 @@ it('forbids commercial users from creating credit notes', function () {
 
     $this->actingAs($commercial)->get(route('credit-notes.create', $this->invoice))->assertForbidden();
 });
+
+it('numbers credit notes in date order and never in the future', function () {
+    $this->actingAs($this->user);
+    $store = fn (string $date) => $this->post(route('credit-notes.store', $this->invoice), [
+        'issue_date' => $date, 'reason' => 'Retour partiel', 'lines' => [$this->line->id => 0.5],
+    ]);
+
+    $store(today()->addDay()->format('Y-m-d'))->assertSessionHasErrors('issue_date');
+    $store('2026-07-15')->assertSessionHasNoErrors();
+    $store('2026-07-10')->assertSessionHasErrors('issue_date');
+    $store('2026-07-15')->assertSessionHasNoErrors();
+
+    expect(CreditNote::count())->toBe(2);
+});

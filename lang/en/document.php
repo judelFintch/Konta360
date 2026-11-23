@@ -74,6 +74,7 @@ return [
     'watermark' => [
         'invoice_draft' => 'Draft',
         'invoice_cancelled' => 'Cancelled',
+        'invoice_credited' => 'Credited',
         'quote_draft' => 'Draft',
         'quote_cancelled' => 'Cancelled',
         'quote_rejected' => 'Rejected',

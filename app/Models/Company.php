@@ -6,6 +6,7 @@ use App\Modules\Billing\Enums\SubscriptionStatus;
 use App\Modules\Companies\Scopes\CompanyScope;
 use App\Modules\Companies\Services\CurrentCompany;
 use Database\Factories\CompanyFactory;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * A subscribing organisation. Every business record belongs to exactly one
@@ -156,7 +158,31 @@ class Company extends Model
     }
 
     /**
-     * Folder of the public disk holding this company's branding files.
+     * Disk holding the branding files (logo, signature, stamp). Private: a
+     * signature or a stamp must never be downloadable without signing in.
+     * They are served by CompanySettingController::assetResponse.
+     */
+    public const BRAND_DISK = 'local';
+
+    public const BRAND_ASSETS = ['logo', 'signature', 'stamp'];
+
+    public static function brandDisk(): Filesystem
+    {
+        return Storage::disk(self::BRAND_DISK);
+    }
+
+    /**
+     * Absolute path of a branding file, or null when there is none.
+     */
+    public function brandAssetPath(string $type): ?string
+    {
+        $path = in_array($type, self::BRAND_ASSETS, true) ? $this->{$type.'_path'} : null;
+
+        return $path && self::brandDisk()->exists($path) ? self::brandDisk()->path($path) : null;
+    }
+
+    /**
+     * Folder of the branding disk holding this company's files.
      */
     public function storageDirectory(): string
     {

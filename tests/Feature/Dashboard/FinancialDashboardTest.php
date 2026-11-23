@@ -111,3 +111,15 @@ it('only shows currencies that carry activity', function () {
 
     expect($metrics->keys()->all())->toBe(['USD']);
 });
+
+it('hides bank balances and supplier expenses from a sales profile', function () {
+    $sales = User::factory()->create();
+    $sales->assignRole(Role::Commercial->value);
+
+    $this->actingAs($sales)->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Chiffre d’affaires du mois')
+        ->assertDontSee('Banque Dashboard')
+        ->assertDontSee('Dépenses du mois')
+        ->assertDontSee('58,00');
+});

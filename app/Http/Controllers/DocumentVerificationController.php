@@ -36,7 +36,7 @@ class DocumentVerificationController extends Controller
             'documentType' => ['quote' => 'Devis', 'invoice' => 'Facture', 'credit_note' => 'Avoir'][$type],
             'verification' => compact('type', 'id', 'token'),
             'fingerprint' => $this->presenter->fingerprint($document),
-            'cancelled' => $this->presenter->watermark($document) !== null,
+            'state' => $this->presenter->verificationState($document),
             'balanceDue' => $document instanceof Invoice ? $document->balanceDue() : null,
         ]);
     }

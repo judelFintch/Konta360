@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 #[Fillable([
     'number',
@@ -181,6 +182,27 @@ class Invoice extends Model
         };
     }
 
+    /**
+     * Invoice numbers must follow the issue dates: an invoice cannot be
+     * numbered with a future date, nor with a date earlier than an invoice
+     * already numbered. Null when it can be validated.
+     */
+    public function chronologyBlocker(): ?string
+    {
+        if ($this->issue_date->gt(today())) {
+            return 'La date de facture ne peut pas être dans le futur : corrigez-la avant de valider.';
+        }
+
+        $latest = static::query()
+            ->whereNotNull('number')
+            ->whereKeyNot($this->getKey())
+            ->max('issue_date');
+
+        return $latest && $this->issue_date->lt($latest)
+            ? 'La facture est datée avant la dernière facture numérotée (du '.Carbon::parse($latest)->format('d/m/Y').') : la numérotation doit suivre l’ordre des dates. Corrigez la date de la facture.'
+            : null;
+    }
+
     public function isOverdue(): bool
     {
         return $this->status === InvoiceStatus::Validated
@@ -193,11 +215,24 @@ class Invoice extends Model
         return max(0, round((float) $this->total - $this->offsetAmount() - $this->creditedAmount() - $this->paidAmount(), 2));
     }
 
+    /**
+     * A validated invoice whose whole amount was cancelled by credit notes:
+     * it stays « validated » in the books but is no longer owed.
+     */
+    public function isFullyCredited(): bool
+    {
+        return $this->status === InvoiceStatus::Validated
+            && $this->creditedAmount() > 0
+            && $this->creditedAmount() >= round((float) $this->total, 2);
+    }
+
     public function paymentLabel(): string
     {
         $paid = $this->paidAmount();
 
         return match (true) {
+            $this->isFullyCredited() => 'Annulée par avoir',
+            $paid <= 0 && $this->balanceDue() <= 0 && $this->creditedAmount() > 0 => 'Soldée par avoir',
             $paid <= 0 => 'Non payée',
             $this->balanceDue() <= 0 => 'Payée',
             default => 'Partiellement payée',

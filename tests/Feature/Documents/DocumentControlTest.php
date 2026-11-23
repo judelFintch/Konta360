@@ -1,17 +1,23 @@
 <?php
 
 use App\Models\Company;
+use App\Models\CreditNote;
 use App\Models\Invoice;
 use App\Models\Party;
+use App\Models\Quote;
 use App\Models\User;
 use App\Modules\Administration\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Administration\Enums\Role;
+use App\Modules\CreditNotes\Enums\CreditNoteStatus;
 use App\Modules\Documents\Services\CommercialDocumentPresenter;
 use App\Modules\Invoices\Enums\InvoiceStatus;
 use App\Modules\Parties\Enums\PartyType;
+use App\Modules\Quotes\Enums\QuoteStatus;
 use chillerlan\QRCode\QRCode;
 
 beforeEach(function () {
+    // The fixture invoice is due on 15/10/2026: keep it « not yet due » whatever the real date.
+    $this->travelTo('2026-09-20 10:00:00');
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->user = User::factory()->create();
     $this->user->assignRole(Role::Comptable->value);
@@ -22,7 +28,7 @@ beforeEach(function () {
         'address' => '12 avenue du Commerce, Kinshasa',
         'default_currency' => 'USD',
     ]);
-    $party = Party::create(['type' => PartyType::Customer, 'name' => 'Client Contrôle', 'is_active' => true]);
+    $party = $this->party = Party::create(['type' => PartyType::Customer, 'name' => 'Client Contrôle', 'is_active' => true]);
     $this->invoice = Invoice::create([
         'number' => 'FAC-2026-00042',
         'party_id' => $party->id,
@@ -160,4 +166,100 @@ it('prints a png qr code that decodes to a working verification link', function 
 
     expect($decoded)->toBe($this->presenter->verificationUrl($this->invoice));
     $this->get($decoded)->assertOk()->assertSee('Document authentique');
+});
+
+function creditInvoice(Invoice $invoice, float $total, string $number = 'AV-2026-00001'): CreditNote
+{
+    return CreditNote::create([
+        'number' => $number, 'invoice_id' => $invoice->id, 'party_id' => $invoice->party_id,
+        'status' => CreditNoteStatus::Issued, 'issue_date' => today(), 'currency' => $invoice->currency,
+        'reason' => 'Erreur de facturation', 'subtotal' => $total, 'discount_total' => 0, 'tax_total' => 0,
+        'total' => $total, 'created_by' => $invoice->created_by,
+    ]);
+}
+
+function makeQuote(Party $party, User $user, array $attributes = []): Quote
+{
+    $quote = Quote::create([
+        'number' => 'DEV-2026-00007', 'party_id' => $party->id, 'status' => QuoteStatus::Sent,
+        'issue_date' => '2026-09-01', 'valid_until' => '2026-10-01', 'currency' => 'USD',
+        'subtotal' => 1000, 'discount_total' => 0, 'tax_total' => 160, 'total' => 1160, 'created_by' => $user->id,
+        ...$attributes,
+    ]);
+    $quote->lines()->create([
+        'position' => 1, 'sku' => 'SRV-01', 'description' => 'Audit comptable', 'unit' => 'forfait',
+        'quantity' => 1, 'unit_price' => 1000, 'discount_rate' => 0, 'tax_rate' => 16,
+        'subtotal' => 1000, 'discount_amount' => 0, 'tax_amount' => 160, 'total' => 1160,
+    ]);
+
+    return $quote;
+}
+
+it('flags an invoice fully cancelled by a credit note as not valid', function () {
+    creditInvoice($this->invoice, 1160);
+
+    $this->get($this->presenter->verificationUrl($this->invoice))
+        ->assertOk()
+        ->assertSee('Document authentique mais non valable')
+        ->assertSee('Annulée par avoir')
+        ->assertSee('AV-2026-00001')
+        ->assertDontSee('Non payée')
+        ->assertDontSee('Validée');
+
+    $this->actingAs($this->user)->get(route('invoices.print', $this->invoice))
+        ->assertOk()
+        ->assertSee('<div class="watermark">Annulée par avoir</div>', false);
+});
+
+it('keeps a partially credited invoice valid and mentions the credit note', function () {
+    creditInvoice($this->invoice, 160);
+
+    $this->get($this->presenter->verificationUrl($this->invoice))
+        ->assertOk()
+        ->assertDontSee('non valable')
+        ->assertSee('Validée — avoir partiel')
+        ->assertSee('Avoir AV-2026-00001 de 160,00 USD');
+});
+
+it('flags an expired quote as not valid', function () {
+    $quote = makeQuote($this->party, $this->user);
+    $this->travelTo('2026-10-02');
+
+    $this->get($this->presenter->verificationUrl($quote))
+        ->assertOk()
+        ->assertSee('Document authentique mais non valable')
+        ->assertSee('Offre expirée le 01/10/2026');
+});
+
+it('shows the invoice issued from a quote, and flags the quote once that invoice is cancelled', function () {
+    $quote = makeQuote($this->party, $this->user, ['status' => QuoteStatus::Accepted]);
+    $this->invoice->update(['quote_id' => $quote->id]);
+
+    $this->get($this->presenter->verificationUrl($quote))
+        ->assertOk()
+        ->assertDontSee('non valable')
+        ->assertSee('Devis facturé par la facture FAC-2026-00042');
+
+    $this->invoice->update(['status' => InvoiceStatus::Cancelled, 'cancelled_at' => now()]);
+
+    $this->get($this->presenter->verificationUrl($quote))
+        ->assertOk()
+        ->assertSee('Document authentique mais non valable')
+        ->assertSee('La facture FAC-2026-00042 issue de ce devis a été annulée.');
+});
+
+it('lets a quote be invoiced again once its invoice is cancelled, but not twice', function () {
+    $quote = makeQuote($this->party, $this->user, ['status' => QuoteStatus::Accepted]);
+    $this->invoice->update(['quote_id' => $quote->id]);
+
+    $this->actingAs($this->user)->post(route('quotes.invoice', $quote))->assertStatus(409);
+
+    $this->invoice->update(['status' => InvoiceStatus::Cancelled, 'cancelled_at' => now()]);
+    $this->post(route('quotes.invoice', $quote))->assertRedirect();
+
+    expect(Invoice::where('quote_id', $quote->id)->count())->toBe(2)
+        ->and($quote->fresh()->invoice->status)->toBe(InvoiceStatus::Draft)
+        ->and($quote->fresh()->latestInvoice->status)->toBe(InvoiceStatus::Draft);
+
+    $this->post(route('quotes.invoice', $quote))->assertStatus(409);
 });

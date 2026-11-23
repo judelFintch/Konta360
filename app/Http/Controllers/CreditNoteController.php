@@ -57,7 +57,16 @@ class CreditNoteController extends Controller
     {
         $this->requirePermission(Permission::CreditNotesCreate);
         $data = $request->validate([
-            'issue_date' => ['required', 'date', 'after_or_equal:'.$invoice->issue_date->format('Y-m-d')],
+            // Credit notes are numbered in date order, like invoices.
+            'issue_date' => [
+                'required', 'date', 'after_or_equal:'.$invoice->issue_date->format('Y-m-d'), 'before_or_equal:today',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $latest = CreditNote::query()->max('issue_date');
+                    if ($latest && strtotime((string) $value) < strtotime((string) $latest)) {
+                        $fail('L’avoir ne peut pas être daté avant le dernier avoir émis (du '.date('d/m/Y', strtotime((string) $latest)).').');
+                    }
+                },
+            ],
             'reason' => ['required', 'string', 'max:2000'],
             'lines' => ['required', 'array'],
             'lines.*' => ['nullable', 'numeric', 'min:0'],

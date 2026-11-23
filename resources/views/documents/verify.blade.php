@@ -20,15 +20,15 @@
         </div>
 
         <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200">
-            @if($cancelled)
+            @if(! $state['valid'])
                 <div class="flex items-center gap-3 bg-red-50 px-6 py-4 text-red-800">
                     <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-                    <div><p class="font-semibold">Document authentique mais non valable</p><p class="text-sm">Ce document a été émis par {{ $company->name }} puis {{ strtolower($document->status->label()) }}.</p></div>
+                    <div><p class="font-semibold">Document authentique mais non valable</p><p class="text-sm">Ce document a été émis par {{ $company->name }} mais n’est plus valable : {{ $state['detail'] ?? mb_strtolower($state['label']).'.' }}</p></div>
                 </div>
             @else
                 <div class="flex items-center gap-3 bg-emerald-50 px-6 py-4 text-emerald-800">
                     <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
-                    <div><p class="font-semibold">Document authentique</p><p class="text-sm">Ce document a bien été émis par {{ $company->name }}.</p></div>
+                    <div><p class="font-semibold">Document authentique</p><p class="text-sm">Ce document a bien été émis par {{ $company->name }}.</p>@if($state['detail'])<p class="mt-1 text-sm">{{ $state['detail'] }}</p>@endif</div>
                 </div>
             @endif
 
@@ -42,10 +42,10 @@
                     <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Déductions (avance, frais)</dt><dd>− {{ number_format((float) $document->deductions_total, 2, ',', ' ') }}</dd></div>
                     <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Net à payer</dt><dd class="font-semibold">{{ number_format($document->netPayable(), 2, ',', ' ') }} {{ $document->currency }}</dd></div>
                 @endif
-                @if(! is_null($balanceDue) && ! $cancelled)
+                @if(! is_null($balanceDue) && $state['valid'])
                     <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Situation</dt><dd>{{ $document->paymentLabel() }}</dd></div>
                 @endif
-                <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Statut</dt><dd>{{ $document->status->label() }}</dd></div>
+                <div class="flex justify-between gap-4 py-3"><dt class="text-gray-500">Statut</dt><dd class="{{ $state['valid'] ? '' : 'font-semibold text-red-700' }}">{{ $state['label'] }}</dd></div>
                 <div class="py-3">
                     <dt class="text-gray-500">Code de contrôle</dt>
                     <dd class="mt-1 font-mono text-base font-semibold tracking-wider">{{ $fingerprint }}</dd>
