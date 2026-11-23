@@ -4,6 +4,8 @@ use App\Livewire\Forms\LoginForm;
 use App\Modules\Authentication\Enums\AuthenticationCodePurpose;
 use App\Modules\Authentication\Services\AuthenticationCodeService;
 use App\Modules\Authentication\Services\PendingLogin;
+use App\Modules\Authentication\Services\SignIn;
+use App\Modules\Authentication\Services\TrustedDevices;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -14,13 +16,23 @@ new #[Layout('layouts.showcase')] class extends Component
 
     /**
      * First step: the password. The sign-in is completed on the next page
-     * with the code sent by email (ADR 0004).
+     * with the code sent by email (ADR 0004), unless this browser is
+     * trusted for the user.
      */
-    public function login(AuthenticationCodeService $codes): void
+    public function login(AuthenticationCodeService $codes, TrustedDevices $devices, SignIn $signIn): void
     {
         $this->validate();
 
         $user = $this->form->authenticate();
+
+        // A trusted device exists only after a valid code, which also verified the address.
+        if ($user->hasVerifiedEmail() && $devices->recognizes($user, request())) {
+            $signIn->complete($user, $this->form->remember);
+            $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+
+            return;
+        }
+
         PendingLogin::start($user, $this->form->remember);
 
         try {

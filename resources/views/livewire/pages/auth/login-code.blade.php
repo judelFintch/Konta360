@@ -4,8 +4,9 @@ use App\Livewire\Forms\LoginForm;
 use App\Modules\Authentication\Enums\AuthenticationCodePurpose;
 use App\Modules\Authentication\Services\AuthenticationCodeService;
 use App\Modules\Authentication\Services\PendingLogin;
+use App\Modules\Authentication\Services\SignIn;
+use App\Modules\Authentication\Services\TrustedDevices;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -15,6 +16,9 @@ new #[Layout('layouts.showcase')] class extends Component
     public string $code = '';
 
     public string $email = '';
+
+    /** Do not ask for a code again on this browser for a while. */
+    public bool $trustDevice = true;
 
     public function mount(): void
     {
@@ -31,7 +35,7 @@ new #[Layout('layouts.showcase')] class extends Component
     /**
      * Second step of the sign-in (ADR 0004).
      */
-    public function verify(AuthenticationCodeService $codes): void
+    public function verify(AuthenticationCodeService $codes, TrustedDevices $devices, SignIn $signIn): void
     {
         $this->validate(['code' => ['required', 'string', 'max:20']], ['code.required' => 'Saisissez le code reçu par e-mail.']);
 
@@ -50,10 +54,10 @@ new #[Layout('layouts.showcase')] class extends Component
             event(new Verified($user));
         }
 
-        $user->forceFill(['last_login_at' => now()])->save();
-        Auth::login($user, PendingLogin::remember());
-        PendingLogin::forget();
-        Session::regenerate();
+        if ($this->trustDevice) {
+            $devices->trust($user, request());
+        }
+        $signIn->complete($user, PendingLogin::remember());
 
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }
@@ -107,6 +111,16 @@ new #[Layout('layouts.showcase')] class extends Component
                 class="mt-1 block w-full py-3 text-center font-mono text-2xl tracking-[0.4em]" />
             <x-input-error :messages="$errors->get('code')" class="mt-2" />
         </div>
+
+        @if (\App\Modules\Authentication\Services\TrustedDevices::enabled())
+            <label for="trust_device" class="flex items-start gap-2 text-sm text-gray-600">
+                <input wire:model="trustDevice" id="trust_device" type="checkbox" class="mt-0.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                <span>
+                    Ne plus demander de code sur cet appareil pendant {{ \App\Modules\Authentication\Services\TrustedDevices::days() }} jours
+                    <span class="block text-xs text-gray-400">Décochez sur un ordinateur partagé. Le mot de passe restera demandé.</span>
+                </span>
+            </label>
+        @endif
 
         <button type="submit" wire:loading.attr="disabled" class="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-70">
             <span wire:loading.remove wire:target="verify">Se connecter</span>

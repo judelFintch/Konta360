@@ -54,6 +54,19 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Trusted devices (ADR 0004, amended)
+    |--------------------------------------------------------------------------
+    |
+    | After a valid sign-in code, a user may ask not to be asked for a code
+    | again on that browser for this many days. The password is still
+    | required at every sign-in. 0 disables the feature: a code every time.
+    |
+    */
+
+    'trusted_device_days' => (int) env('TRUSTED_DEVICE_DAYS', 30),
+
     'terms_version' => env('TERMS_VERSION', '2026-10-06'),
 
     'retention_years' => (int) env('DATA_RETENTION_YEARS', 10),

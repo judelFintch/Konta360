@@ -45,10 +45,27 @@ pas la connexion.
      l'e-mail.
 4. **Envoi** : synchrone, car l'hébergement n'a pas de file d'attente.
    L'expéditeur est `MAIL_FROM_ADDRESS`, soit **dev@fintchweb.com**.
-5. **Hors périmètre** : la connexion par la plateforme ne fait pas exception,
-   ses administrateurs reçoivent aussi un code. Il n'y a pas d'« appareil de
-   confiance » qui dispenserait du code : « Rester connecté » prolonge
+5. **Plateforme** : la connexion par la plateforme ne fait pas exception,
+   ses administrateurs reçoivent aussi un code. « Rester connecté » prolonge
    seulement la session une fois connecté.
+6. **Appareil de confiance** (amendement du 2026-11-23). Demander un code à
+   chaque connexion pesait trop sur les utilisateurs quotidiens.
+   - Sur la page du code, la case « Ne plus demander de code sur cet appareil
+     pendant 30 jours » est cochée par défaut. Une fois le code validé, le
+     navigateur reçoit un cookie chiffré et `HttpOnly` qui contient
+     « id utilisateur | jeton aléatoire de 64 caractères ». La table
+     `trusted_devices` n'en garde qu'un hash SHA-256.
+   - Sur ce navigateur, le **mot de passe reste toujours demandé**, mais pas
+     le code. L'état du compte et de la société est vérifié comme
+     d'habitude.
+   - La confiance n'est jamais prolongée : passé ce délai, un code est de
+     nouveau demandé. La durée se règle avec `TRUSTED_DEVICE_DAYS`, et `0`
+     désactive la fonction.
+   - Tout changement de mot de passe oublie tous les appareils de
+     l'utilisateur (`User::booted`), qu'il soit fait par l'utilisateur, un
+     administrateur, la plateforme ou un lien de réinitialisation.
+   - La page Profil liste les appareils de confiance et permet d'en oublier
+     un ou tous.
 
 ## Conséquences
 

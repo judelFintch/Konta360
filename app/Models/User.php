@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Modules\Authentication\Enums\AuthenticationCodePurpose;
 use App\Modules\Authentication\Services\AuthenticationCodeService;
+use App\Modules\Authentication\Services\TrustedDevices;
 use App\Modules\Companies\Services\PlatformCompanyAccess;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -56,6 +57,25 @@ class User extends Authenticatable implements MustVerifyEmail
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    public function trustedDevices(): HasMany
+    {
+        return $this->hasMany(TrustedDevice::class);
+    }
+
+    /**
+     * A new password, whoever sets it (the user, an administrator, the
+     * platform, a reset link), withdraws the trust given to every browser:
+     * the next sign-in asks for a code again everywhere.
+     */
+    protected static function booted(): void
+    {
+        static::updated(function (self $user) {
+            if ($user->wasChanged('password')) {
+                app(TrustedDevices::class)->forgetAll($user);
+            }
+        });
     }
 
     /**
