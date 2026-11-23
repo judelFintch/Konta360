@@ -11,6 +11,7 @@ use App\Modules\Administration\Enums\Role;
 use App\Modules\Billing\Enums\SubscriptionPaymentStatus;
 use App\Modules\Billing\Enums\SubscriptionStatus;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Volt\Volt;
 
@@ -121,7 +122,7 @@ it('lets platform administrators reset a subscriber user password and logs the a
         'temporary_password_confirmation' => 'Temporaire-2026!',
     ])->assertRedirect(route('platform.companies.show', $this->paid));
 
-    expect(\Illuminate\Support\Facades\Hash::check('Temporaire-2026!', $this->admin->fresh()->password))->toBeTrue()
+    expect(Hash::check('Temporaire-2026!', $this->admin->fresh()->password))->toBeTrue()
         ->and($this->admin->fresh()->must_change_password)->toBeTrue()
         ->and(PlatformEvent::where('company_id', $this->paid->id)->where('action', 'user_password_reset')
             ->where('actor_id', $this->operator->id)->exists())->toBeTrue();
@@ -161,6 +162,8 @@ it('keeps every super admin page and action away from company users', function (
     ['POST', 'platform.companies.payments.store'],
     ['PATCH', 'platform.companies.users.toggle'],
     ['POST', 'platform.companies.users.password.reset'],
+    ['PATCH', 'platform.companies.exempt'],
+    ['POST', 'platform.companies.exempt.notify'],
 ]);
 
 it('records the last sign-in of a user', function () {

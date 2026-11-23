@@ -64,6 +64,9 @@
         @if (session('success'))
             <div class="mb-6 rounded-md bg-green-50 p-4 text-sm text-green-800">{{ session('success') }}</div>
         @endif
+        @if (session('warning'))
+            <div class="mb-6 rounded-md bg-amber-50 p-4 text-sm text-amber-800">{{ session('warning') }}</div>
+        @endif
         @if ($errors->any())
             <div class="mb-6 rounded-md bg-red-50 p-4 text-sm text-red-800">{{ $errors->first() }}</div>
         @endif

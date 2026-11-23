@@ -57,7 +57,15 @@ Konta360.
    changement de formule, prolongation, paiement confirmé, refusé ou enregistré, utilisateur
    désactivé, formule modifiée. Ce journal n'est pas une donnée de la société : il n'est ni montré
    à la société, ni exporté, et il est supprimé avec elle.
-6. **Dernière connexion** (`users.last_login_at`) : enregistrée lorsque le code de connexion est
+6. **E-mail d'accès offert.** Quand un opérateur offre l'accès à une société ou le lui retire, chaque
+   administrateur actif de la société reçoit un e-mail individuel (`ComplimentaryAccessMail`). La
+   case « Prévenir par e-mail », cochée par défaut, permet de basculer sans rien envoyer. Le bouton
+   « Renvoyer l'e-mail » de la fiche le renvoie à une société en accès offert, par exemple à celles
+   qui l'avaient obtenu avant l'existence de cet e-mail. L'envoi est synchrone, faute de file
+   d'attente sur l'hébergement. Un échec d'envoi n'annule pas le changement d'accès : il est signalé
+   à l'opérateur et consigné dans `platform_events` (action `exemption_email`), avec la liste des
+   destinataires.
+7. **Dernière connexion** (`users.last_login_at`) : enregistrée lorsque le code de connexion est
    validé (ADR 0004).
 
 ## Conséquences

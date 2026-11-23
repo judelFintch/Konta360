@@ -37,10 +37,21 @@
                 </form>
             @endif
             @unless ($company->isClosed())
-                <form method="POST" action="{{ route('platform.companies.exempt', $company) }}">
+                <form method="POST" action="{{ route('platform.companies.exempt', $company) }}" class="flex items-center gap-2 rounded-md border border-gray-300 bg-white pl-3">
                     @csrf @method('PATCH')
-                    <button type="submit" class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">{{ $company->billing_exempt ? 'Retirer l’accès offert' : 'Offrir l’accès' }}</button>
+                    <input type="hidden" name="notify" value="0">
+                    <label class="flex items-center gap-1.5 text-xs text-gray-600" title="Envoie un e-mail aux administrateurs actifs de la société">
+                        <input type="checkbox" name="notify" value="1" checked class="rounded border-gray-300 text-indigo-600">
+                        Prévenir par e-mail
+                    </label>
+                    <button type="submit" class="border-l border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">{{ $company->billing_exempt ? 'Retirer l’accès offert' : 'Offrir l’accès' }}</button>
                 </form>
+                @if ($company->billing_exempt)
+                    <form method="POST" action="{{ route('platform.companies.exempt.notify', $company) }}">
+                        @csrf
+                        <button type="submit" class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Renvoyer l’e-mail</button>
+                    </form>
+                @endif
                 @if ($company->isSuspended())
                     <form method="POST" action="{{ route('platform.companies.reactivate', $company) }}">
                         @csrf @method('PATCH')

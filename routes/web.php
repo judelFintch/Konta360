@@ -205,6 +205,9 @@ Route::prefix('platform')->name('platform.')->middleware(['auth', 'verified', 'p
     Route::patch('companies/{company}/suspend', [PlatformCompanyController::class, 'suspend'])->name('companies.suspend');
     Route::patch('companies/{company}/reactivate', [PlatformCompanyController::class, 'reactivate'])->name('companies.reactivate');
     Route::patch('companies/{company}/exempt', [PlatformCompanyController::class, 'toggleExempt'])->name('companies.exempt');
+    Route::post('companies/{company}/exempt/notify', [PlatformCompanyController::class, 'notifyExempt'])
+        ->middleware('throttle:10,1')
+        ->name('companies.exempt.notify');
     Route::patch('companies/{company}/close', [PlatformCompanyController::class, 'close'])->name('companies.close');
     Route::get('plans', [PlatformPlanController::class, 'index'])->name('plans.index');
     Route::put('plans/{plan}', [PlatformPlanController::class, 'update'])->name('plans.update');

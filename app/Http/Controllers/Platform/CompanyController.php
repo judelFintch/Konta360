@@ -9,6 +9,7 @@ use App\Models\PlatformEvent;
 use App\Modules\Administration\Enums\Role;
 use App\Modules\Billing\Enums\SubscriptionPaymentMethod;
 use App\Modules\Billing\Enums\SubscriptionStatus;
+use App\Modules\Billing\Services\ComplimentaryAccessNotifier;
 use App\Modules\Billing\Services\PlanLimits;
 use App\Modules\Companies\Services\CurrentCompany;
 use App\Modules\Companies\Services\PlatformCompanyAccess;
@@ -151,16 +152,42 @@ class CompanyController extends Controller
     }
 
     /**
-     * Complimentary access: no evaluation, no payment, no plan limits.
+     * Complimentary access: no evaluation, no payment, no plan limits. The
+     * company administrators are told by email unless the operator unticks
+     * « notify » (to undo a mistake silently, for instance).
      */
-    public function toggleExempt(Request $request, Company $company): RedirectResponse
+    public function toggleExempt(Request $request, Company $company, ComplimentaryAccessNotifier $notifier): RedirectResponse
     {
+        $request->validate(['notify' => ['sometimes', 'boolean']]);
         $company->forceFill(['billing_exempt' => ! $company->billing_exempt])->save();
         PlatformEvent::record($request->user(), $company, 'exemption', $company->billing_exempt ? 'Accès offert accordé' : 'Accès offert retiré');
 
-        return back()->with('success', $company->billing_exempt
+        $message = $company->billing_exempt
             ? "« {$company->name} » bénéficie d’un accès offert."
-            : "« {$company->name} » est de nouveau soumise à l’abonnement.");
+            : "« {$company->name} » est de nouveau soumise à l’abonnement.";
+        if (! $request->boolean('notify', true)) {
+            return back()->with('success', $message.' Aucun e-mail envoyé.');
+        }
+
+        $summary = ComplimentaryAccessNotifier::summary($notifier->notify($company, $company->billing_exempt, $request->user()));
+
+        return back()
+            ->with('success', trim($message.' '.$summary['success']))
+            ->with('warning', $summary['warning']);
+    }
+
+    /**
+     * Sends the complimentary access email again, e.g. to companies granted
+     * the access before the email existed, or after a delivery failure.
+     */
+    public function notifyExempt(Request $request, Company $company, ComplimentaryAccessNotifier $notifier): RedirectResponse
+    {
+        abort_unless($company->billing_exempt, 409, 'Cette société ne bénéficie pas d’un accès offert.');
+        abort_if($company->isClosed(), 409, 'Cette société est clôturée.');
+
+        $summary = ComplimentaryAccessNotifier::summary($notifier->notify($company, true, $request->user()));
+
+        return back()->with('success', $summary['success'])->with('warning', $summary['warning']);
     }
 
     /**
