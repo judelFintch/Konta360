@@ -55,7 +55,8 @@
         .accent { height: 4px; margin: -14mm -14mm 8mm; background: #4338ca; }
 
         /* En-tête */
-        .logo { max-width: 170px; max-height: 64px; margin-bottom: 6px; }
+        /* Explicit sizes computed by Company::brandImageSize: dompdf ignores max-height on images. */
+        .logo { display: block; margin-bottom: 6px; }
         .company-name { color: #111827; font-size: 17px; font-weight: bold; line-height: 1.2; }
         .company-meta { margin-top: 4px; color: #4b5563; font-size: 9px; }
         .doc-title { margin: 0; color: #4338ca; font-size: 26px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
@@ -98,7 +99,7 @@
         .signatures { margin-top: 12px; }
         .signatures > tbody > tr > td { width: 50%; }
         .sign-box { height: 78px; padding: 8px 10px; border: 1px dashed #9ca3af; border-radius: 4px; }
-        .sign-box img { max-height: 56px; max-width: 110px; margin-right: 8px; }
+        .sign-box img { margin-right: 8px; vertical-align: bottom; }
 
         /* Contrôle */
         .control { margin-top: 12px; }
@@ -161,7 +162,7 @@
         <table>
             <tr>
                 <td style="width: 55%">
-                    @if ($company->logo_path)<img class="logo" src="{{ $asset('logo') }}" alt="{{ $company->name }}"><br>@endif
+                    @if ($logoSize = $company->brandImageSize('logo', 190, 64, balanced: true))<img class="logo" src="{{ $asset('logo') }}" alt="{{ $company->name }}" style="width: {{ $logoSize[0] }}px; height: {{ $logoSize[1] }}px">@endif
                     <div class="company-name">{{ $company->name }}@if ($company->legal_form) <span class="muted" style="font-size: 11px; font-weight: normal">{{ $company->legal_form }}</span>@endif</div>
                     <div class="company-meta">
                         @if ($company->address){!! nl2br(e($company->address)) !!}<br>@endif

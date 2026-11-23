@@ -182,6 +182,33 @@ class Company extends Model
     }
 
     /**
+     * Display size, in pixels, of a branding image inside a box of
+     * $maxWidth × $maxHeight, proportions kept. Set as explicit width and
+     * height: dompdf does not reliably apply max-width/max-height to images.
+     *
+     * With $balanced (logos), every shape gets about the same visual weight:
+     * the image aims at a fixed share of the box area, so a square logo is
+     * not dwarfed by a wide one, nor a wide one squeezed to a thin strip.
+     *
+     * @return array{0: int, 1: int}|null
+     */
+    public function brandImageSize(string $type, int $maxWidth, int $maxHeight, bool $balanced = false): ?array
+    {
+        $path = $this->brandAssetPath($type);
+        $size = $path ? @getimagesize($path) : false;
+        if (! $size || $size[0] <= 0 || $size[1] <= 0) {
+            return null;
+        }
+
+        $ratio = $size[0] / $size[1];
+        $width = $balanced ? sqrt($maxWidth * $maxHeight * 0.55 * $ratio) : $maxWidth;
+        $height = $width / $ratio;
+        $scale = min(1, $maxWidth / $width, $maxHeight / $height);
+
+        return [max(1, (int) round($width * $scale)), max(1, (int) round($height * $scale))];
+    }
+
+    /**
      * Folder of the branding disk holding this company's files.
      */
     public function storageDirectory(): string

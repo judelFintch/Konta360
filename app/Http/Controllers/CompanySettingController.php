@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Modules\Companies\Services\BrandImageProcessor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CompanySettingController extends Controller
@@ -15,7 +19,7 @@ class CompanySettingController extends Controller
         return view('administration.company-settings.edit', ['company' => Company::current()]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request, BrandImageProcessor $images): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -43,10 +47,10 @@ class CompanySettingController extends Controller
             'invoice_prefix' => ['required', 'regex:/^[A-Z0-9-]+$/', 'max:20'],
             'credit_note_prefix' => ['required', 'regex:/^[A-Z0-9-]+$/', 'max:20'],
             'number_padding' => ['required', 'integer', 'min:3', 'max:10'],
-            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
             'remove_logo' => ['sometimes', 'boolean'],
-            'signature' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'stamp' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'signature' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
+            'stamp' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
             'invoice_footer' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -58,21 +62,37 @@ class CompanySettingController extends Controller
             $data['logo_path'] = null;
         }
 
+        // Cleaned first (orientation, empty margins, size, PNG): a refused
+        // image leaves the current one untouched.
+        $processed = [];
         foreach (Company::BRAND_ASSETS as $asset) {
             if (! $request->hasFile($asset)) {
                 continue;
             }
+            try {
+                $processed[$asset] = $images->process($request->file($asset)->getRealPath(), $asset);
+            } catch (InvalidArgumentException $exception) {
+                throw ValidationException::withMessages([$asset => $exception->getMessage()]);
+            }
+        }
+
+        $warnings = [];
+        foreach ($processed as $asset => $result) {
             $pathColumn = $asset.'_path';
             if ($company->{$pathColumn}) {
                 Company::brandDisk()->delete($company->{$pathColumn});
             }
-            $data[$pathColumn] = $request->file($asset)->store($company->storageDirectory(), Company::BRAND_DISK);
+            $data[$pathColumn] = $company->storageDirectory().'/'.$asset.'-'.Str::random(32).'.png';
+            Company::brandDisk()->put($data[$pathColumn], $result['png']);
+            $warnings = [...$warnings, ...$result['warnings']];
         }
         unset($data['logo'], $data['remove_logo'], $data['signature'], $data['stamp']);
 
         $company->update($data);
 
-        return back()->with('success', 'Les paramètres de l’entreprise ont été enregistrés.');
+        return back()
+            ->with('success', 'Les paramètres de l’entreprise ont été enregistrés.')
+            ->with('warnings', $warnings);
     }
 
     /**

@@ -10,8 +10,8 @@
 <body class="min-h-screen bg-gray-100 font-sans text-gray-900 antialiased">
     <main class="mx-auto max-w-lg px-4 py-10">
         <div class="mb-6 flex items-center gap-3">
-            @if($company->logo_path)
-                <img src="{{ route('documents.verify.logo', $verification) }}" alt="" class="h-12 w-auto max-w-[140px] object-contain">
+            @if($logoSize = $company->brandImageSize('logo', 160, 52, balanced: true))
+                <img src="{{ route('documents.verify.logo', $verification) }}" alt="" style="width: {{ $logoSize[0] }}px; height: {{ $logoSize[1] }}px">
             @endif
             <div>
                 <p class="text-lg font-bold">{{ $company->name }}</p>

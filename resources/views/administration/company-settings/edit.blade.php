@@ -2,6 +2,7 @@
     <x-slot name="header"><div><p class="text-sm font-medium text-indigo-600">Administration</p><h1 class="text-2xl font-semibold text-gray-900">Paramètres de l’entreprise</h1><p class="mt-1 text-sm text-gray-500">Ces informations apparaissent sur les documents commerciaux imprimés et PDF.</p></div></x-slot>
     <div class="py-10"><div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         @if(session('success'))<div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>@endif
+        @foreach(session('warnings', []) as $warning)<div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{{ $warning }}</div>@endforeach
         <form method="POST" action="{{ route('administration.company.update') }}" enctype="multipart/form-data" class="space-y-6">
             @csrf @method('PUT')
             <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
@@ -49,11 +50,24 @@
             </section>
 
             <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
-            <h2 class="mb-6 text-lg font-semibold">Documents et visuels</h2>
+            <h2 class="text-lg font-semibold">Documents et visuels</h2>
+            <p class="mb-6 mt-1 text-sm text-gray-600">
+                Les images sont recadrées automatiquement (marges vides retirées), remises à l’endroit et réduites.
+                Pour un meilleur rendu : un logo horizontal, en PNG à fond transparent, d’au moins 600 pixels de large.
+            </p>
+            @if ($previewSize = $company->brandImageSize('logo', 190, 64, balanced: true))
+                <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <p class="mb-3 text-xs font-medium uppercase tracking-wide text-gray-500">Aperçu sur vos devis et factures</p>
+                    <div class="rounded bg-white p-4 shadow-sm">
+                        <img src="{{ route('administration.company.asset', 'logo') }}" alt="" style="width: {{ $previewSize[0] }}px; height: {{ $previewSize[1] }}px">
+                        <p class="mt-1.5 text-base font-bold text-gray-900">{{ $company->name }}</p>
+                    </div>
+                </div>
+            @endif
             <div class="grid gap-6 sm:grid-cols-3">
                 @foreach(['logo' => 'Logo', 'signature' => 'Signature', 'stamp' => 'Cachet'] as $field => $label)
                     <div>
-                        <x-input-label :for="$field" :value="$label.' (PNG/JPG/WEBP, 2 Mo max)'" />
+                        <x-input-label :for="$field" :value="$label.' (PNG/JPG/WEBP, 5 Mo max)'" />
                         @if($company->{$field.'_path'})
                             <img src="{{ route('administration.company.asset', $field) }}" alt="{{ $label }}" class="my-3 h-20 max-w-full object-contain">
                         @endif

@@ -104,3 +104,18 @@ MAIL_FROM_NAME="Konta360"
 Puis `php artisan optimize:clear && php artisan optimize`. Vérifier les enregistrements SPF et
 DKIM du domaine (cPanel › Délivrabilité des e-mails), sinon les codes risquent d'arriver en
 courrier indésirable.
+
+## Logos, signatures et cachets
+
+À l'envoi, les images sont remises à l'endroit, débarrassées de leurs marges vides, réduites et
+enregistrées en PNG (`BrandImageProcessor`). L'affichage calcule ensuite une taille équilibrée
+quelle que soit la forme du logo.
+
+- L'extension PHP **GD**, avec la prise en charge de PNG, JPEG et WEBP, doit être activée
+  (cPanel › Sélectionner la version de PHP › Extensions). **EXIF** sert à redresser les photos
+  prises au téléphone.
+- Les fichiers acceptés pèsent jusqu'à 5 Mo. Vérifiez que `upload_max_filesize` et
+  `post_max_size` sont d'au moins 8M (cPanel › Options PHP).
+- La migration `normalize_existing_brand_images` retraite une fois les images déjà envoyées. Pour
+  la relancer à la main : `php artisan konta360:normalize-brand-images`. L'option `--company=ID`
+  limite le traitement à une seule société.

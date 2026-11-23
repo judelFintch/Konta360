@@ -26,8 +26,8 @@ new class extends Component
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" wire:navigate>
                         @php $company = \App\Models\Company::current(); @endphp
-                        @if ($company->logo_path)
-                            <img src="{{ route('administration.company.asset', 'logo') }}" alt="{{ $company->name }}" class="block h-9 w-auto max-w-[140px] object-contain">
+                        @if ($logoSize = $company->brandImageSize('logo', 150, 40, balanced: true))
+                            <img src="{{ route('administration.company.asset', 'logo') }}" alt="{{ $company->name }}" class="block" style="width: {{ $logoSize[0] }}px; height: {{ $logoSize[1] }}px">
                         @else
                             <span class="flex items-center gap-2">
                                 <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($company->name, 0, 1)) }}</span>
