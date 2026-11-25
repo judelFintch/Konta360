@@ -25,6 +25,8 @@
         'adresse' => blank($company->address),
         'raison sociale' => $company->name === config('app.name'),
     ]));
+    $documentPrimaryColor = $company->documentPrimaryColor();
+    $documentSoftColor = $company->documentSoftColor();
 @endphp
 <!DOCTYPE html>
 <html lang="{{ $locale }}">
@@ -52,30 +54,30 @@
         .alert a { color: #78350f; font-weight: 600; }
 
         .page { position: relative; max-width: 210mm; min-height: 297mm; margin: 16px auto 32px; padding: 14mm 14mm 30mm; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.12); overflow: hidden; }
-        .accent { height: 4px; margin: -14mm -14mm 8mm; background: #4338ca; }
+        .accent { height: 4px; margin: -14mm -14mm 8mm; background: {{ $documentPrimaryColor }}; }
 
         /* En-tête */
         /* Explicit sizes computed by Company::brandImageSize: dompdf ignores max-height on images. */
         .logo { display: block; margin-bottom: 6px; }
         .company-name { color: #111827; font-size: 17px; font-weight: bold; line-height: 1.2; }
         .company-meta { margin-top: 4px; color: #4b5563; font-size: 9px; }
-        .doc-title { margin: 0; color: #4338ca; font-size: 26px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+        .doc-title { margin: 0; color: {{ $documentPrimaryColor }}; font-size: 26px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
         .meta { width: auto; margin: 6px 0 0 auto; }
         .meta td { padding: 1px 0 1px 14px; }
         .meta td:first-child { color: #6b7280; }
-        .status { display: inline-block; padding: 2px 8px; border-radius: 10px; color: #4338ca; background: #e0e7ff; font-size: 8px; font-weight: bold; text-transform: uppercase; }
+        .status { display: inline-block; padding: 2px 8px; border-radius: 10px; color: {{ $documentPrimaryColor }}; background: {{ $documentSoftColor }}; font-size: 8px; font-weight: bold; text-transform: uppercase; }
 
         /* Blocs émetteur / client */
         .boxes { margin-top: 14px; }
         .boxes > tbody > tr > td { width: 50%; }
         .box { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 4px; }
-        .box.client { border-color: #4338ca; }
+        .box.client { border-color: {{ $documentPrimaryColor }}; }
         .label { margin-bottom: 5px; color: #6b7280; font-size: 7.5px; font-weight: bold; letter-spacing: .8px; text-transform: uppercase; }
         .party-name { color: #111827; font-size: 12px; font-weight: bold; }
 
         /* Lignes */
         .lines { margin-top: 14px; }
-        .lines th { padding: 7px 6px; color: #fff; background: #4338ca; font-size: 7.5px; text-align: left; text-transform: uppercase; letter-spacing: .4px; }
+        .lines th { padding: 7px 6px; color: #fff; background: {{ $documentPrimaryColor }}; font-size: 7.5px; text-align: left; text-transform: uppercase; letter-spacing: .4px; }
         .lines td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; }
         .lines tbody tr:nth-child(even) td { background: #f9fafb; }
         .lines .num { text-align: right; white-space: nowrap; }
@@ -87,11 +89,11 @@
         .tax-table th { padding: 4px 6px; color: #4b5563; background: #f3f4f6; font-size: 7.5px; text-align: right; text-transform: uppercase; }
         .tax-table th:first-child, .tax-table td:first-child { text-align: left; }
         .tax-table td { padding: 4px 6px; border-bottom: 1px solid #f3f4f6; text-align: right; }
-        .words { margin-top: 10px; padding: 8px 10px; border-left: 3px solid #4338ca; background: #f9fafb; }
+        .words { margin-top: 10px; padding: 8px 10px; border-left: 3px solid {{ $documentPrimaryColor }}; background: {{ $documentSoftColor }}; }
         .totals td { padding: 3px 8px; }
         .totals td:last-child { text-align: right; white-space: nowrap; }
-        .totals .grand td { padding: 6px 8px; color: #fff; background: #4338ca; font-size: 12px; font-weight: bold; }
-        .totals .due td { padding: 6px 8px; border-top: 2px solid #4338ca; border-bottom: 2px solid #4338ca; font-size: 11px; font-weight: bold; }
+        .totals .grand td { padding: 6px 8px; color: #fff; background: {{ $documentPrimaryColor }}; font-size: 12px; font-weight: bold; }
+        .totals .due td { padding: 6px 8px; border-top: 2px solid {{ $documentPrimaryColor }}; border-bottom: 2px solid {{ $documentPrimaryColor }}; font-size: 11px; font-weight: bold; }
 
         .section { margin-top: 10px; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 4px; white-space: pre-line; }
 
@@ -114,6 +116,7 @@
         
         @media print {
             body { background: #fff; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none !important; }
             .page { max-width: none; min-height: 0; margin: 0; padding: 0; box-shadow: none; overflow: visible; }
             .accent { margin: 0 0 8mm; }

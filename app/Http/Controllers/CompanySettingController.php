@@ -52,9 +52,15 @@ class CompanySettingController extends Controller
             'signature' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
             'stamp' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:5120'],
             'invoice_footer' => ['nullable', 'string', 'max:2000'],
+            'document_primary_color' => ['required_unless:use_default_document_colors,1', 'nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'use_default_document_colors' => ['sometimes', 'boolean'],
         ]);
 
         $company = Company::current();
+        if ($request->boolean('use_default_document_colors')) {
+            $data['document_primary_color'] = null;
+        }
+        unset($data['use_default_document_colors']);
         if ($request->boolean('remove_logo') && ! $request->hasFile('logo')) {
             if ($company->logo_path) {
                 Company::brandDisk()->delete($company->logo_path);

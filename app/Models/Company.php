@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Storage;
     'bank_account_name', 'bank_account_number', 'bank_swift', 'mobile_money',
     'default_tax_rate', 'default_payment_days', 'default_quote_validity_days',
     'quote_prefix', 'invoice_prefix', 'credit_note_prefix', 'number_padding',
-    'logo_path', 'signature_path', 'stamp_path',
+    'logo_path', 'signature_path', 'stamp_path', 'document_primary_color',
 ])]
 class Company extends Model
 {
@@ -165,6 +165,22 @@ class Company extends Model
     public const BRAND_DISK = 'local';
 
     public const BRAND_ASSETS = ['logo', 'signature', 'stamp'];
+
+    /** The current document theme, preserved for companies without a choice. */
+    public function documentPrimaryColor(): string
+    {
+        return $this->document_primary_color ?: '#4338ca';
+    }
+
+    /** A light tint derived from the chosen color for badges and subtle fills. */
+    public function documentSoftColor(): string
+    {
+        $hex = ltrim($this->documentPrimaryColor(), '#');
+        $channels = array_map('hexdec', str_split($hex, 2));
+        $channels = array_map(fn (int $channel) => (int) round($channel * 0.12 + 255 * 0.88), $channels);
+
+        return sprintf('#%02x%02x%02x', ...$channels);
+    }
 
     public static function brandDisk(): Filesystem
     {

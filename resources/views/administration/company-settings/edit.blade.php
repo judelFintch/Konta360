@@ -64,6 +64,21 @@
                     </div>
                 </div>
             @endif
+            <div class="mb-6 rounded-lg border border-gray-200 p-4">
+                <h3 class="text-sm font-semibold text-gray-900">Couleur des factures et documents commerciaux</h3>
+                <p class="mt-1 text-sm text-gray-600">Choisissez une couleur assortie à votre logo. Elle sera utilisée sur les factures, devis et avoirs imprimés et PDF. Les entreprises sans préférence gardent le violet actuel.</p>
+                <div class="mt-4 flex flex-wrap items-end gap-5">
+                    <div>
+                        <x-input-label for="document_primary_color" value="Couleur principale" />
+                        <input id="document_primary_color" name="document_primary_color" type="color" value="{{ old('document_primary_color', $company->documentPrimaryColor()) }}" class="mt-1 h-11 w-20 cursor-pointer rounded border border-gray-300 p-1">
+                        <x-input-error :messages="$errors->get('document_primary_color')" class="mt-2" />
+                    </div>
+                    <label class="flex items-center gap-2 pb-2 text-sm text-gray-700">
+                        <input id="use_default_document_colors" name="use_default_document_colors" type="checkbox" value="1" @checked(old('use_default_document_colors')) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                        Restaurer la couleur par défaut
+                    </label>
+                </div>
+            </div>
             <div class="grid gap-6 sm:grid-cols-3">
                 @foreach(['logo' => 'Logo', 'signature' => 'Signature', 'stamp' => 'Cachet'] as $field => $label)
                     <div>
