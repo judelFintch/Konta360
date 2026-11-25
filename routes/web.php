@@ -104,6 +104,8 @@ Route::prefix('administration/data')->name('administration.data.')
     ->group(function () {
         Route::get('/', [CompanyDataController::class, 'show'])->name('show');
         Route::get('export', [CompanyDataController::class, 'export'])->middleware('throttle:5,1')->name('export');
+        Route::get('real-start/archive', [CompanyDataController::class, 'downloadRealStartArchive'])->middleware('throttle:5,1')->name('real-start.archive');
+        Route::post('real-start', [CompanyDataController::class, 'startReal'])->middleware('throttle:3,1')->name('real-start');
         Route::post('terms', [CompanyDataController::class, 'acceptTerms'])->name('terms.accept');
         Route::post('closure', [CompanyDataController::class, 'requestClosure'])->name('closure.request');
         Route::delete('closure', [CompanyDataController::class, 'cancelClosure'])->name('closure.cancel');

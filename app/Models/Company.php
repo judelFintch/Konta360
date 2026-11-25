@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Storage;
     'default_tax_rate', 'default_payment_days', 'default_quote_validity_days',
     'quote_prefix', 'invoice_prefix', 'credit_note_prefix', 'number_padding',
     'logo_path', 'signature_path', 'stamp_path', 'document_primary_color',
+    'real_started_at', 'real_start_date', 'real_start_archive_path', 'real_started_by',
 ])]
 class Company extends Model
 {
@@ -246,6 +247,8 @@ class Company extends Model
             'terms_accepted_at' => 'datetime',
             'closure_requested_at' => 'datetime',
             'closed_at' => 'datetime',
+            'real_started_at' => 'datetime',
+            'real_start_date' => 'date',
         ];
     }
 }
