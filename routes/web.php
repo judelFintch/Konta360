@@ -161,6 +161,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('treasury/accounts', [TreasuryController::class, 'storeAccount'])->name('treasury.accounts.store');
     Route::get('treasury/transactions/create', [TreasuryController::class, 'createTransaction'])->name('treasury.transactions.create');
     Route::post('treasury/transactions', [TreasuryController::class, 'storeTransaction'])->name('treasury.transactions.store');
+    Route::get('treasury/transactions/{transaction}/proof/{format?}', [TreasuryController::class, 'proof'])->name('treasury.transactions.proof');
     Route::post('treasury/payments/{payment}/assign', [TreasuryController::class, 'assignPayment'])->name('treasury.payments.assign');
     Route::get('treasury/reconciliations', [BankReconciliationController::class, 'index'])->name('treasury.reconciliations.index');
     Route::get('treasury/reconciliations/create', [BankReconciliationController::class, 'create'])->name('treasury.reconciliations.create');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\Company;
 use App\Models\TreasuryAccount;
 use App\Models\TreasuryTransaction;
 use App\Modules\Accounting\Services\AccountingService;
@@ -10,14 +11,22 @@ use App\Modules\Administration\Enums\Permission;
 use App\Modules\Companies\Enums\SequenceType;
 use App\Modules\Companies\Validation\CompanyRule;
 use App\Modules\Payments\Enums\PaymentStatus;
+use App\Modules\Treasury\Enums\TreasuryFlowNature;
 use App\Modules\Treasury\Enums\TreasuryAccountType;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
+use App\Modules\Treasury\Services\TreasuryReportBuilder;
+use Barryvdh\DomPDF\Facade\Pdf;
+use chillerlan\QRCode\Common\EccLevel;
+use chillerlan\QRCode\Output\QROutputInterface;
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class TreasuryController extends Controller
 {
@@ -129,7 +138,53 @@ class TreasuryController extends Controller
             return $transaction;
         });
 
-        return to_route('treasury.index')->with('success', "Le mouvement {$transaction->number} a été comptabilisé.");
+        return to_route('treasury.transactions.proof', ['transaction' => $transaction, 'format' => 'epson']);
+    }
+
+    public function proof(TreasuryTransaction $transaction, TreasuryReportBuilder $reports, string $format = 'epson'): Response
+    {
+        $this->authorizeTreasury();
+        abort_unless(in_array($format, ['epson', 'a4'], true), 404);
+        $transaction->loadMissing(['account', 'destinationAccount', 'creator']);
+        $company = Company::current();
+        $qrData = route('treasury.transactions.proof', ['transaction' => $transaction, 'format' => 'a4']);
+        $thermalText = implode(' ', array_filter([
+            $company->name,
+            $company->address,
+            $company->phone,
+            $company->email,
+            $transaction->account->name,
+            $transaction->destinationAccount?->name,
+            $transaction->reference,
+            $transaction->description,
+        ]));
+        $statement = $reports->statement(
+            $transaction->account,
+            $transaction->transaction_date->toDateString(),
+            $transaction->transaction_date->toDateString(),
+        );
+        $line = $statement['lines']->firstWhere('transaction.id', $transaction->id);
+        $balanceAfter = $line['balance'] ?? null;
+        $heightMm = 205 + max(0, (int) ceil(mb_strlen($thermalText) / 32) - 8) * 4;
+
+        $pdf = Pdf::loadView('treasury.proof', [
+            'company' => $company,
+            'transaction' => $transaction,
+            'format' => $format,
+            'nature' => TreasuryFlowNature::of($transaction),
+            'balanceAfter' => $balanceAfter,
+            'printedAt' => now(),
+            'qrCode' => $this->proofQrCode($qrData),
+            'money' => fn ($value) => number_format((float) $value, 2, ',', ' '),
+        ]);
+
+        if ($format === 'epson') {
+            $pdf->setPaper([0, 0, 80 * 72 / 25.4, $heightMm * 72 / 25.4]);
+        } else {
+            $pdf->setPaper('a4', 'portrait');
+        }
+
+        return $pdf->stream('preuve-'.$transaction->number.'-'.$format.'.pdf');
     }
 
     public function assignPayment(Request $request, Payment $payment, AccountingService $accounting): RedirectResponse
@@ -139,7 +194,7 @@ class TreasuryController extends Controller
             'treasury_account_id' => ['required', 'integer', CompanyRule::exists('treasury_accounts')],
         ]);
 
-        DB::transaction(function () use ($payment, $data, $accounting) {
+        $movement = DB::transaction(function () use ($payment, $data, $accounting) {
             $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             abort_unless($payment->status === PaymentStatus::Recorded, 409, 'Seul un règlement actif peut être affecté.');
             abort_if($payment->treasury_account_id, 409, 'Ce règlement est déjà affecté à la trésorerie.');
@@ -167,9 +222,24 @@ class TreasuryController extends Controller
                 'created_by' => auth()->id(),
             ]);
             $movement->update(['number' => SequenceType::TreasuryTransaction->nextNumber($movement->transaction_date)]);
+
+            return $movement;
         });
 
-        return back()->with('success', 'Le règlement historique a été affecté au compte de trésorerie.');
+        return to_route('treasury.transactions.proof', ['transaction' => $movement, 'format' => 'epson']);
+    }
+
+    private function proofQrCode(string $data): string
+    {
+        $options = new QROptions([
+            'outputType' => QROutputInterface::GDIMAGE_PNG,
+            'eccLevel' => EccLevel::M,
+            'scale' => 5,
+            'quietzoneSize' => 2,
+            'outputBase64' => true,
+        ]);
+
+        return (new QRCode($options))->render($data);
     }
 
     private function authorizeTreasury(): void
