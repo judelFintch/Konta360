@@ -169,6 +169,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('treasury/reconciliations/{reconciliation}/pdf', [TreasuryReportController::class, 'reconciliation'])->name('treasury.reconciliations.pdf');
     Route::get('treasury/reports', [TreasuryReportController::class, 'index'])->name('treasury.reports.index');
     Route::get('treasury/reports/journal', [TreasuryReportController::class, 'journal'])->name('treasury.reports.journal');
+    Route::get('treasury/reports/entries-exits', [TreasuryReportController::class, 'entriesExits'])->name('treasury.reports.entries-exits');
     Route::get('treasury/reports/position', [TreasuryReportController::class, 'position'])->name('treasury.reports.position');
     Route::get('treasury/reports/flows', [TreasuryReportController::class, 'flows'])->name('treasury.reports.flows');
     Route::get('treasury/reports/cash-count', [TreasuryReportController::class, 'cashCount'])->name('treasury.reports.cash-count');

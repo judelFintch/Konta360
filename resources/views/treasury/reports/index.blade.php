@@ -26,6 +26,23 @@
 
         <div class="grid gap-6 lg:grid-cols-2">
             <section class="{{ $card }}">
+                <h2 class="font-semibold text-gray-900">Registre simple des entrées et sorties</h2>
+                <p class="mt-1 text-sm text-gray-500">Liste chronologique des mouvements d’un compte, avec motif, référence, montant reçu ou payé et solde après chaque opération. Les totaux permettent de vérifier le solde final.</p>
+                @if ($accounts->isEmpty())
+                    <p class="mt-5 rounded-lg bg-gray-50 p-4 text-sm text-gray-500">Ajoutez un compte de caisse ou de banque pour créer ce rapport.</p>
+                @else
+                    <form method="GET" action="{{ route('treasury.reports.entries-exits') }}" target="_blank" class="mt-5 grid gap-4 sm:grid-cols-3">
+                        <div class="sm:col-span-3"><label class="text-sm font-medium text-gray-700">Compte</label>
+                            <select name="account_id" class="{{ $input }}" required>@foreach ($accounts as $account)<option value="{{ $account->id }}">{{ $account->name }} — {{ $account->type->label() }} ({{ $account->currency }})</option>@endforeach</select>
+                        </div>
+                        <div><label class="text-sm font-medium text-gray-700">Du</label><input type="date" name="date_from" value="{{ $dateFrom }}" class="{{ $input }}" required></div>
+                        <div><label class="text-sm font-medium text-gray-700">Au</label><input type="date" name="date_to" value="{{ $dateTo }}" class="{{ $input }}" required></div>
+                        <div class="sm:col-span-3 flex justify-end"><button class="{{ $button }}">Imprimer le registre</button></div>
+                    </form>
+                @endif
+            </section>
+
+            <section class="{{ $card }}">
                 <h2 class="font-semibold text-gray-900">Journal de caisse / de banque</h2>
                 <p class="mt-1 text-sm text-gray-500">Brouillard chronologique : solde reporté, chaque pièce avec sa nature, encaissements, décaissements, solde progressif, pointage bancaire et solde de clôture.</p>
                 <form method="GET" action="{{ route('treasury.reports.journal') }}" target="_blank" class="mt-5 grid gap-4 sm:grid-cols-2">

@@ -61,6 +61,23 @@ class TreasuryReportController extends Controller
         ], 'journal-tresorerie-'.$filters['dateFrom'].'-'.$filters['dateTo'].'.pdf', 'landscape');
     }
 
+    public function entriesExits(Request $request): Response
+    {
+        $this->authorizeReports();
+        $filters = $this->filters($request);
+        $account = $filters['account'];
+        if (! $account) {
+            throw ValidationException::withMessages(['account_id' => 'Choisissez un compte pour établir le rapport.']);
+        }
+        $statement = $this->reports->statement($account, $filters['dateFrom'], $filters['dateTo']);
+
+        return $this->pdf('treasury.reports.pdf.entries-exits', [
+            ...$filters,
+            'title' => 'Registre des entrées et sorties',
+            'statement' => $statement,
+        ], 'registre-entrees-sorties-'.$account->id.'-'.$filters['dateFrom'].'-'.$filters['dateTo'].'.pdf');
+    }
+
     public function position(Request $request): Response
     {
         $this->authorizeReports();
