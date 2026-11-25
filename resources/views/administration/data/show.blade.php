@@ -30,12 +30,17 @@
                 </div>
 
                 <div class="mt-5 rounded-lg border border-gray-200 p-4">
-                    <h3 class="font-semibold text-gray-900">Données qui seront archivées puis nettoyées</h3>
-                    <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                        @foreach ($realStartPreview as $label => $count)
-                            <div class="flex justify-between gap-3 rounded bg-gray-50 px-3 py-2"><dt class="text-gray-600">{{ ucfirst($label) }}</dt><dd class="font-semibold text-gray-900">{{ $count }}</dd></div>
-                        @endforeach
-                    </dl>
+                    <button type="button" data-collapse-trigger data-target="#real-start-preview" aria-controls="real-start-preview" aria-expanded="true" class="group flex w-full items-center justify-between gap-4 text-left font-semibold text-gray-900">
+                        <span>Données qui seront archivées puis nettoyées</span>
+                        <svg class="h-4 w-4 shrink-0 text-gray-500 transition-transform group-aria-expanded:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
+                    </button>
+                    <div id="real-start-preview" data-fx-collapse data-state="open" class="overflow-hidden transition-[height] duration-300 ease-in-out">
+                        <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                            @foreach ($realStartPreview as $label => $count)
+                                <div class="flex justify-between gap-3 rounded bg-gray-50 px-3 py-2"><dt class="text-gray-600">{{ ucfirst($label) }}</dt><dd class="font-semibold text-gray-900">{{ $count }}</dd></div>
+                            @endforeach
+                        </dl>
+                    </div>
                 </div>
 
                 <form method="POST" action="{{ route('administration.data.real-start') }}" class="mt-6 space-y-6">
