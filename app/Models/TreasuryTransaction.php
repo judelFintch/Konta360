@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Modules\Companies\Concerns\BelongsToCompany;
 use App\Modules\Treasury\Enums\TreasuryTransactionType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -44,6 +46,20 @@ class TreasuryTransaction extends Model
     public function reconciliations(): BelongsToMany
     {
         return $this->belongsToMany(BankReconciliation::class, 'bank_reconciliation_transactions');
+    }
+
+    /**
+     * Movements that change the balance of $account: its own entries and
+     * outflows, plus the transfers it receives.
+     */
+    #[Scope]
+    protected function forAccount(Builder $query, TreasuryAccount $account): void
+    {
+        $query->where(fn (Builder $query) => $query
+            ->where('treasury_account_id', $account->id)
+            ->orWhere(fn (Builder $query) => $query
+                ->where('destination_account_id', $account->id)
+                ->where('type', TreasuryTransactionType::Transfer)));
     }
 
     public function signedAmountFor(TreasuryAccount $account): float

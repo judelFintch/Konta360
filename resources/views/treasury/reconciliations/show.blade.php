@@ -6,7 +6,12 @@
             <dl class="grid gap-5 sm:grid-cols-4"><div><dt class="text-xs uppercase text-gray-500">Période</dt><dd class="mt-1 font-semibold">{{ $reconciliation->starts_on->format('d/m/Y') }} – {{ $reconciliation->ends_on->format('d/m/Y') }}</dd></div><div><dt class="text-xs uppercase text-gray-500">Solde initial</dt><dd class="mt-1 font-semibold">{{ number_format((float)$reconciliation->statement_opening_balance,2,',',' ') }} {{ $reconciliation->currency }}</dd></div><div><dt class="text-xs uppercase text-gray-500">Solde final</dt><dd class="mt-1 font-semibold">{{ number_format((float)$reconciliation->statement_closing_balance,2,',',' ') }} {{ $reconciliation->currency }}</dd></div><div><dt class="text-xs uppercase text-gray-500">Écart</dt><dd class="mt-1 font-semibold text-emerald-600">{{ number_format((float)$reconciliation->difference,2,',',' ') }} {{ $reconciliation->currency }}</dd></div></dl>
             <div class="mt-8 overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50 text-left text-xs uppercase text-gray-500"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Numéro</th><th class="px-4 py-3">Libellé</th><th class="px-4 py-3 text-right">Montant rapproché</th></tr></thead><tbody class="divide-y">@foreach($reconciliation->transactions as $transaction)<tr><td class="px-4 py-3">{{ $transaction->transaction_date->format('d/m/Y') }}</td><td class="px-4 py-3 font-semibold">{{ $transaction->number }}</td><td class="px-4 py-3">{{ $transaction->description }}</td><td class="px-4 py-3 text-right font-semibold">{{ number_format($transaction->signedAmountFor($reconciliation->account),2,',',' ') }} {{ $reconciliation->currency }}</td></tr>@endforeach</tbody></table></div>
             @if($reconciliation->notes)<div class="mt-6 rounded-lg bg-gray-50 p-4 text-sm">{{ $reconciliation->notes }}</div>@endif
-            <div class="mt-8"><a href="{{ route('treasury.reconciliations.index') }}" class="text-sm font-semibold text-indigo-600">← Tous les rapprochements</a></div>
+            <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
+                <a href="{{ route('treasury.reconciliations.index') }}" class="text-sm font-semibold text-indigo-600">← Tous les rapprochements</a>
+                @can(\App\Modules\Administration\Enums\Permission::ReportsExport->value)
+                    <a href="{{ route('treasury.reconciliations.pdf', $reconciliation) }}" target="_blank" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">Imprimer l’état de rapprochement</a>
+                @endcan
+            </div>
         </article>
     </div></div>
 </x-app-layout>
