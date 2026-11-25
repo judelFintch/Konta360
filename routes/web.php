@@ -26,6 +26,7 @@ use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TreasuryController;
+use App\Http\Controllers\TreasuryReportController;
 use App\Http\Controllers\UserManagementController;
 use App\Modules\Administration\Enums\Permission;
 use Illuminate\Support\Facades\Route;
@@ -165,6 +166,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('treasury/reconciliations/create', [BankReconciliationController::class, 'create'])->name('treasury.reconciliations.create');
     Route::post('treasury/reconciliations', [BankReconciliationController::class, 'store'])->name('treasury.reconciliations.store');
     Route::get('treasury/reconciliations/{reconciliation}', [BankReconciliationController::class, 'show'])->name('treasury.reconciliations.show');
+    Route::get('treasury/reconciliations/{reconciliation}/pdf', [TreasuryReportController::class, 'reconciliation'])->name('treasury.reconciliations.pdf');
+    Route::get('treasury/reports', [TreasuryReportController::class, 'index'])->name('treasury.reports.index');
+    Route::get('treasury/reports/journal', [TreasuryReportController::class, 'journal'])->name('treasury.reports.journal');
+    Route::get('treasury/reports/position', [TreasuryReportController::class, 'position'])->name('treasury.reports.position');
+    Route::get('treasury/reports/flows', [TreasuryReportController::class, 'flows'])->name('treasury.reports.flows');
+    Route::get('treasury/reports/cash-count', [TreasuryReportController::class, 'cashCount'])->name('treasury.reports.cash-count');
 
     Route::get('accounting/entries', [AccountingEntryController::class, 'index'])->name('accounting.entries.index');
     Route::get('accounting/entries/create', [AccountingEntryController::class, 'create'])->name('accounting.entries.create');
